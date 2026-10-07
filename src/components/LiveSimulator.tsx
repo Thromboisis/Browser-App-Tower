@@ -33,7 +33,14 @@ import {
   Mic,
   Image as ImageIcon,
   Menu,
-  Search
+  Search,
+  Settings,
+  CloudSun,
+  CloudRain,
+  Wind,
+  Droplets,
+  MapPin,
+  GripVertical
 } from 'lucide-react';
 
 interface MockNote {
@@ -118,6 +125,197 @@ export const LiveSimulator: React.FC = () => {
       messages: { right: 44, top: 12, width: 460, height: 580 }
     };
   });
+
+  // Extension Settings State
+  const [newTabOverrideEnabled, setNewTabOverrideEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('app_tower_override_enabled');
+      return saved === 'true'; // disabled by default!
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const [dockWidth, setDockWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('app_tower_dock_width');
+      return saved ? parseInt(saved, 10) || 44 : 44;
+    } catch (e) {
+      return 44;
+    }
+  });
+
+  const [dockColor, setDockColor] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app_tower_dock_color') || '#12141a';
+    } catch (e) {
+      return '#12141a';
+    }
+  });
+
+  const [searchProvider, setSearchProvider] = useState<'google' | 'duckduckgo' | 'bing' | 'ecosia' | 'brave' | 'custom'>(() => {
+    try {
+      return (localStorage.getItem('app_tower_search_provider') as any) || 'google';
+    } catch (e) {
+      return 'google';
+    }
+  });
+
+  const [customSearchUrl, setCustomSearchUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app_tower_custom_search_url') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  const [bgType, setBgType] = useState<'gradient' | 'bing' | 'mountain' | 'cosmic' | 'custom'>(() => {
+    try {
+      return (localStorage.getItem('app_tower_bg_type') as any) || 'gradient';
+    } catch (e) {
+      return 'gradient';
+    }
+  });
+
+  const [customBgUrl, setCustomBgUrl] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app_tower_custom_bg_url') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+
+  const [showClockApplet, setShowClockApplet] = useState<boolean>(true);
+  const [showWeatherApplet, setShowWeatherApplet] = useState<boolean>(true);
+  const [clockPos, setClockPos] = useState<{ x: number; y: number }>({ x: 24, y: 28 });
+  const [weatherPos, setWeatherPos] = useState<{ x: number; y: number }>({ x: 24, y: 175 });
+
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [bypassDisabledNotice, setBypassDisabledNotice] = useState(false);
+
+  // Time & Location state
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [userLocation, setUserLocation] = useState('San Francisco, CA');
+  const [userWeather, setUserWeather] = useState({ temp: 68, condition: 'Partly Cloudy', wind: 8, humidity: 55 });
+
+  // Draggable state for Clock & Weather applets inside Simulator
+  const [draggingApplet, setDraggingApplet] = useState<'clock' | 'weather' | null>(null);
+  const appletDragStart = useRef<{ startX: number; startY: number; initX: number; initY: number }>({
+    startX: 0, startY: 0, initX: 0, initY: 0
+  });
+
+  const handleStartAppletDrag = (e: React.MouseEvent, type: 'clock' | 'weather') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingApplet(type);
+    const init = type === 'clock' ? clockPos : weatherPos;
+    appletDragStart.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: init.x,
+      initY: init.y
+    };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!draggingApplet) return;
+      const dx = e.clientX - appletDragStart.current.startX;
+      const dy = e.clientY - appletDragStart.current.startY;
+      const newX = Math.max(8, Math.min(420, appletDragStart.current.initX + dx));
+      const newY = Math.max(8, Math.min(380, appletDragStart.current.initY + dy));
+      if (draggingApplet === 'clock') {
+        setClockPos({ x: newX, y: newY });
+      } else {
+        setWeatherPos({ x: newX, y: newY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (draggingApplet) setDraggingApplet(null);
+    };
+
+    if (draggingApplet) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggingApplet]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    // Attempt location & weather fetch
+    const fetchLoc = async () => {
+      try {
+        const ipRes = await fetch('https://ipapi.co/json/');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          if (ipData.city) {
+            setUserLocation(`${ipData.city}${ipData.region_code ? ', ' + ipData.region_code : ''}`);
+          }
+          if (ipData.latitude && ipData.longitude) {
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ipData.latitude}&longitude=${ipData.longitude}&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph`);
+            if (wRes.ok) {
+              const wData = await wRes.json();
+              if (wData.current_weather) {
+                setUserWeather({
+                  temp: Math.round(wData.current_weather.temperature),
+                  condition: wData.current_weather.weathercode === 0 ? 'Clear Sky' : 'Partly Cloudy',
+                  wind: Math.round(wData.current_weather.windspeed),
+                  humidity: 55
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (tz) {
+            const city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Local';
+            setUserLocation(city);
+          }
+        } catch (err) {}
+      }
+    };
+    fetchLoc();
+  }, []);
+
+  // Persist settings changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_dock_width', String(dockWidth));
+    } catch (e) {}
+  }, [dockWidth]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_dock_color', dockColor);
+    } catch (e) {}
+  }, [dockColor]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_override_enabled', String(newTabOverrideEnabled));
+    } catch (e) {}
+  }, [newTabOverrideEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_search_provider', searchProvider);
+      localStorage.setItem('app_tower_custom_search_url', customSearchUrl);
+      localStorage.setItem('app_tower_bg_type', bgType);
+      localStorage.setItem('app_tower_custom_bg_url', customBgUrl);
+    } catch (e) {}
+  }, [searchProvider, customSearchUrl, bgType, customBgUrl]);
 
   // Persist apps and window bounds changes to localStorage
   useEffect(() => {
@@ -774,69 +972,246 @@ export const LiveSimulator: React.FC = () => {
           }}
           className="relative w-full h-[620px] bg-slate-950 flex overflow-hidden select-none"
         >
-          {/* Main Web Page Content: has 44px right margin reserved when dock is expanded */}
+          {/* Main Web Page Content: has dynamic right margin reserved when dock is expanded */}
           <main 
             style={{ 
-              marginRight: isDockCollapsed ? '0px' : '44px',
+              marginRight: isDockCollapsed ? '0px' : `${dockWidth}px`,
               transition: 'margin-right 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
-            className="flex-1 h-full overflow-y-auto p-8 text-slate-200 relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+            className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950"
           >
             {activeWebsite === 'newtab' ? (
               /* New Tab Page View */
-              <div className="h-full flex flex-col items-center justify-center -mt-6 space-y-8 select-none">
-                {/* Live Clock & Date */}
-                <div className="flex flex-col items-center gap-1.5 text-center">
-                  <div className="text-6xl font-extralight tracking-tight text-white font-mono drop-shadow-md">
-                    12:00
+              !newTabOverrideEnabled && !bypassDisabledNotice ? (
+                /* Disabled Notice Screen (Disabled by default) */
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-6 select-none bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+                  <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-xl shadow-amber-500/5">
+                    <Sliders className="w-8 h-8" />
                   </div>
-                  <div className="text-xs font-medium text-slate-400">
-                    Wednesday, October 7
+                  <div className="max-w-md space-y-2">
+                    <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                      Setting Disabled by Default
+                    </span>
+                    <h2 className="text-xl font-bold text-white tracking-tight mt-2">
+                      New Tab Override is Disabled
+                    </h2>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Chrome extension setting <strong>"New Tab Override"</strong> is disabled by default. When enabled, every new tab loads your custom App Tower dashboard with choice of search provider, Bing daily wallpapers, and draggable clock & weather applets.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        setNewTabOverrideEnabled(true);
+                        showNotification('New Tab Override Enabled');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Enable New Tab Override</span>
+                    </button>
+                    <button
+                      onClick={() => setBypassDisabledNotice(true)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition cursor-pointer"
+                    >
+                      Preview Dashboard
+                    </button>
                   </div>
                 </div>
+              ) : (
+                /* Active New Tab Experience with Wallpapers & Draggable Applets */
+                <div 
+                  className="relative w-full h-full min-h-[600px] flex flex-col items-center justify-center p-6 select-none overflow-hidden"
+                  style={{
+                    backgroundImage: bgType === 'gradient' ? undefined : (
+                      bgType === 'bing' ? 'url("https://bing.biturl.top/?resolution=1920&format=image&index=0")' :
+                      bgType === 'mountain' ? 'url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80")' :
+                      bgType === 'cosmic' ? 'url("https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1920&q=80")' :
+                      customBgUrl ? `url("${customBgUrl}")` : undefined
+                    ),
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  {/* Backdrop tint filter when wallpaper is active */}
+                  {bgType !== 'gradient' && (
+                    <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] z-0 pointer-events-none" />
+                  )}
 
-                {/* Google Search Form */}
-                <div className="w-full max-w-xl">
-                  <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 rounded-full px-5 py-3 shadow-xl backdrop-blur-md transition-all">
-                    <Search className="w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder="Search Google or type a URL..." 
-                      className="bg-transparent border-none outline-none text-sm text-slate-100 placeholder-slate-500 flex-1 font-sans"
-                      defaultValue=""
-                    />
-                    <div className="w-6 h-6 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs">
-                      ↵
+                  {/* Top Controls Bar */}
+                  <div className="absolute top-4 left-6 right-6 flex items-center justify-between z-20 pointer-events-none">
+                    <div className="pointer-events-auto">
+                      {!newTabOverrideEnabled && (
+                        <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full text-[11px] text-amber-300 font-medium shadow-md">
+                          <span>Override Disabled in Settings</span>
+                          <button
+                            onClick={() => {
+                              setNewTabOverrideEnabled(true);
+                              showNotification('New Tab Override Enabled');
+                            }}
+                            className="bg-amber-400 hover:bg-amber-300 text-black font-bold px-2 py-0.5 rounded text-[10px] transition cursor-pointer"
+                          >
+                            Enable
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="pointer-events-auto flex items-center gap-2">
+                      <button
+                        onClick={() => setIsConfigModalOpen(true)}
+                        className="w-9 h-9 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center shadow-lg transition-all hover:rotate-30 cursor-pointer"
+                        title="Configure New Tab (Search, Wallpapers, Clock, Weather)"
+                      >
+                        <Settings className="w-4 h-4 text-blue-400" />
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Quick Shortcuts */}
-                <div className="grid grid-cols-6 gap-4 w-full max-w-lg">
-                  {[
-                    { name: 'Google', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
-                    { name: 'YouTube', color: 'bg-rose-600/10 text-rose-400 border-rose-500/20' },
-                    { name: 'Gmail', color: 'bg-red-600/10 text-red-400 border-red-500/20' },
-                    { name: 'GitHub', color: 'bg-slate-800 text-slate-200 border-slate-700' },
-                    { name: 'Calendar', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
-                    { name: 'Reddit', color: 'bg-orange-600/10 text-orange-400 border-orange-500/20' },
-                  ].map((item) => (
-                    <div key={item.name} className="flex flex-col items-center gap-2 group cursor-pointer">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border font-bold text-xs shadow-md transition-transform group-hover:scale-105 ${item.color}`}>
-                        {item.name[0]}
+                  {/* DRAGGABLE LIVE CLOCK APPLET */}
+                  {showClockApplet && (
+                    <div
+                      style={{
+                        left: `${clockPos.x}px`,
+                        top: `${clockPos.y}px`,
+                        cursor: draggingApplet === 'clock' ? 'grabbing' : 'default'
+                      }}
+                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow"
+                    >
+                      {/* Header Drag Handle */}
+                      <div
+                        onMouseDown={(e) => handleStartAppletDrag(e, 'clock')}
+                        className="h-8 px-3 bg-black/25 border-b border-white/5 flex items-center justify-between cursor-grab active:cursor-grabbing text-xs text-slate-400"
+                        title="Drag to reposition clock"
+                      >
+                        <div className="flex items-center gap-1.5 font-semibold text-[11px] text-slate-300">
+                          <GripVertical className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Live Clock</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10.5px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                          <MapPin className="w-2.5 h-2.5" />
+                          <span className="truncate">{userLocation}</span>
+                        </div>
                       </div>
-                      <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition font-medium">
-                        {item.name}
-                      </span>
+                      <div className="p-3.5 text-center flex flex-col items-center">
+                        <div className="text-3xl font-light tracking-tight text-white font-mono flex items-baseline gap-1">
+                          <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/\s?[AP]M/i, '')}</span>
+                          <span className="text-xs font-bold text-blue-400">
+                            {currentTime.getHours() >= 12 ? 'PM' : 'AM'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-400 mt-0.5">
+                          {currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  )}
 
-                <div className="text-[11px] text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>App Tower Dock is active & docked on the New Tab page!</span>
+                  {/* DRAGGABLE LIVE WEATHER APPLET */}
+                  {showWeatherApplet && (
+                    <div
+                      style={{
+                        left: `${weatherPos.x}px`,
+                        top: `${weatherPos.y}px`,
+                        cursor: draggingApplet === 'weather' ? 'grabbing' : 'default'
+                      }}
+                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow"
+                    >
+                      {/* Header Drag Handle */}
+                      <div
+                        onMouseDown={(e) => handleStartAppletDrag(e, 'weather')}
+                        className="h-8 px-3 bg-black/25 border-b border-white/5 flex items-center justify-between cursor-grab active:cursor-grabbing text-xs text-slate-400"
+                        title="Drag to reposition weather"
+                      >
+                        <div className="flex items-center gap-1.5 font-semibold text-[11px] text-slate-300">
+                          <GripVertical className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Live Weather</span>
+                        </div>
+                        <div className="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full truncate max-w-[110px]">
+                          {userLocation}
+                        </div>
+                      </div>
+                      <div className="p-3.5 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-amber-400 flex-shrink-0">
+                            <CloudSun className="w-6 h-6 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-light text-white font-mono leading-none">
+                              {userWeather.temp}°F
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                              {userWeather.condition}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 border-t border-white/5 text-[10.5px] text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <Wind className="w-3 h-3 text-slate-500" /> {userWeather.wind} mph
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Droplets className="w-3 h-3 text-slate-500" /> {userWeather.humidity}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CENTER CONTENT: SEARCH & SHORTCUTS */}
+                  <div className="relative z-10 w-full max-w-lg flex flex-col items-center gap-6 mt-4">
+                    {/* Search Form with active Search Provider */}
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const input = (e.currentTarget.elements.namedItem('search_query') as HTMLInputElement)?.value;
+                        if (!input) return;
+                        showNotification(`Searching via ${searchProvider.toUpperCase()}: ${input}`);
+                      }}
+                      className="w-full"
+                    >
+                      <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 rounded-full px-5 py-3 shadow-2xl backdrop-blur-md transition-all">
+                        <Search className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <input 
+                          name="search_query"
+                          type="text" 
+                          placeholder={`Search with ${searchProvider === 'custom' ? 'Custom Engine' : searchProvider.charAt(0).toUpperCase() + searchProvider.slice(1)} or type a URL...`}
+                          className="bg-transparent border-none outline-none text-sm text-slate-100 placeholder-slate-500 flex-1 font-sans"
+                          autoComplete="off"
+                        />
+                        <button type="submit" className="w-6 h-6 rounded-full bg-blue-600/20 hover:bg-blue-600/30 flex items-center justify-center text-blue-400 text-xs transition cursor-pointer">
+                          ↵
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Quick Shortcuts */}
+                    <div className="grid grid-cols-6 gap-3 w-full">
+                      {[
+                        { name: 'Google', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
+                        { name: 'YouTube', color: 'bg-rose-600/10 text-rose-400 border-rose-500/20' },
+                        { name: 'Gmail', color: 'bg-red-600/10 text-red-400 border-red-500/20' },
+                        { name: 'GitHub', color: 'bg-slate-800 text-slate-200 border-slate-700' },
+                        { name: 'Calendar', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
+                        { name: 'Reddit', color: 'bg-orange-600/10 text-orange-400 border-orange-500/20' },
+                      ].map((item) => (
+                        <div key={item.name} className="flex flex-col items-center gap-1.5 group cursor-pointer">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border font-bold text-xs shadow-md transition-transform group-hover:scale-105 ${item.color}`}>
+                            {item.name[0]}
+                          </div>
+                          <span className="text-[10.5px] text-slate-400 group-hover:text-slate-200 transition font-medium">
+                            {item.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="text-[11px] text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>App Tower Dock active on New Tab page</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               /* Document / Portal Content Mock */
               <div className="max-w-3xl mx-auto space-y-6">
@@ -899,13 +1274,15 @@ export const LiveSimulator: React.FC = () => {
             )}
           </main>
 
-          {/* FIRMLY DOCKED 44px SIDEBAR RAIL (On right edge) */}
+          {/* FIRMLY DOCKED SIDEBAR RAIL (On right edge with dynamic width & color) */}
           <aside
             style={{
+              width: `${dockWidth}px`,
+              backgroundColor: dockColor,
               transform: isDockCollapsed ? 'translateX(100%)' : 'translateX(0)',
-              transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+              transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), width 0.15s ease, background-color 0.15s ease'
             }}
-            className="absolute top-0 right-0 w-[44px] h-full bg-[#12141a] border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-[-2px_0_12px_rgba(0,0,0,0.4)]"
+            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-[-2px_0_12px_rgba(0,0,0,0.4)]"
           >
             {/* App Icons (Vertical Stack) */}
             <div 
@@ -988,6 +1365,19 @@ export const LiveSimulator: React.FC = () => {
               >
                 <Plus className="w-5 h-5 text-white" strokeWidth={2.6} />
               </button>
+
+              {/* EXTENSION SETTINGS GEAR BUTTON */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  setIsSettingsModalOpen(true);
+                }}
+                className="mt-1 w-8 h-8 flex items-center justify-center cursor-default transition-all duration-150 hover:rotate-45 text-slate-400 hover:text-white"
+                title="Sidebar & Extension Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Bottom spacer */}
@@ -1048,6 +1438,308 @@ export const LiveSimulator: React.FC = () => {
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Remove from dock</span>
               </button>
+
+              <div className="h-[1px] bg-slate-800 my-0.5"></div>
+
+              {/* EXTENSION SETTINGS */}
+              <button
+                onClick={() => {
+                  setContextMenu(null);
+                  setIsSettingsModalOpen(true);
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-blue-600/20 hover:text-white transition text-left group"
+              >
+                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-400" />
+                <span className="font-medium">Sidebar & Tab Settings...</span>
+              </button>
+            </div>
+          )}
+
+          {/* SIDEBAR & EXTENSION SETTINGS MODAL */}
+          {isSettingsModalOpen && (
+            <div 
+              onClick={() => setIsSettingsModalOpen(false)}
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
+            >
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-5 space-y-4 text-xs text-slate-200"
+              >
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2 font-bold text-sm text-white">
+                    <Settings className="w-4 h-4 text-blue-400" />
+                    <span>Sidebar & Tab Settings</span>
+                  </div>
+                  <button 
+                    onClick={() => setIsSettingsModalOpen(false)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* New Tab Override Toggle */}
+                <div className="space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-200 text-xs">New Tab Override</span>
+                    <button
+                      onClick={() => {
+                        const next = !newTabOverrideEnabled;
+                        setNewTabOverrideEnabled(next);
+                        showNotification(next ? 'New Tab Override Enabled' : 'New Tab Override Disabled');
+                      }}
+                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                        newTabOverrideEnabled ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                      }`}
+                    >
+                      <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Disabled by default. When enabled, opening a new tab loads your custom App Tower dashboard.
+                  </p>
+                </div>
+
+                {/* Sidebar Width Slider */}
+                <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-200 text-xs">Sidebar Width</span>
+                    <span className="text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md font-mono">
+                      {dockWidth}px
+                    </span>
+                  </div>
+                  <input 
+                    type="range"
+                    min="36"
+                    max="72"
+                    value={dockWidth}
+                    onChange={(e) => setDockWidth(parseInt(e.target.value, 10))}
+                    className="w-full accent-blue-500 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>36px (Slim)</span>
+                    <span>44px (Default)</span>
+                    <span>72px (Wide)</span>
+                  </div>
+                </div>
+
+                {/* Sidebar Color */}
+                <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="font-semibold text-slate-200 text-xs block">Sidebar Color</span>
+                  <div className="flex items-center gap-2">
+                    {[
+                      { name: 'Obsidian', color: '#12141a' },
+                      { name: 'Navy', color: '#0f172a' },
+                      { name: 'Charcoal', color: '#18181b' },
+                      { name: 'Black', color: '#000000' },
+                      { name: 'Slate', color: '#1e293b' },
+                      { name: 'Indigo', color: '#151226' },
+                    ].map(item => (
+                      <button
+                        key={item.color}
+                        onClick={() => setDockColor(item.color)}
+                        style={{ backgroundColor: item.color }}
+                        className={`w-6 h-6 rounded-lg border transition-transform cursor-pointer ${
+                          dockColor === item.color ? 'border-blue-400 scale-110 shadow-md shadow-blue-500/20 ring-1 ring-blue-400' : 'border-white/10 hover:scale-105'
+                        }`}
+                        title={item.name}
+                      />
+                    ))}
+                    <div className="relative w-6 h-6 rounded-lg border border-dashed border-slate-600 flex items-center justify-center overflow-hidden cursor-pointer" title="Custom color">
+                      <input 
+                        type="color" 
+                        value={dockColor} 
+                        onChange={(e) => setDockColor(e.target.value)}
+                        className="absolute -top-2 -left-2 w-10 h-10 opacity-0 cursor-pointer" 
+                      />
+                      <span className="text-[10px] text-slate-400">+</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsSettingsModalOpen(false)}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-xs shadow-lg shadow-blue-600/30 transition cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* NEW TAB CONFIGURATION MODAL */}
+          {isConfigModalOpen && (
+            <div 
+              onClick={() => setIsConfigModalOpen(false)}
+              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
+            >
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-5 space-y-4 text-xs text-slate-200 max-h-[90%] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2 font-bold text-sm text-white">
+                    <Settings className="w-4 h-4 text-blue-400" />
+                    <span>New Tab Configuration</span>
+                  </div>
+                  <button 
+                    onClick={() => setIsConfigModalOpen(false)}
+                    className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 1. Search Provider */}
+                <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="font-semibold text-slate-200 text-xs block">Search Provider</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'google', label: 'Google' },
+                      { id: 'duckduckgo', label: 'DuckDuckGo' },
+                      { id: 'bing', label: 'Bing' },
+                      { id: 'ecosia', label: 'Ecosia' },
+                      { id: 'brave', label: 'Brave' },
+                      { id: 'custom', label: 'Custom' }
+                    ].map(prov => (
+                      <button
+                        key={prov.id}
+                        type="button"
+                        onClick={() => setSearchProvider(prov.id as any)}
+                        className={`py-1.5 px-2 rounded-lg border text-xs font-medium text-center transition cursor-pointer ${
+                          searchProvider === prov.id
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-semibold shadow-sm'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {prov.label}
+                      </button>
+                    ))}
+                  </div>
+                  {searchProvider === 'custom' && (
+                    <div className="mt-2 space-y-1">
+                      <label className="text-[10.5px] text-slate-400">Custom URL (use <code>{'{q}'}</code> for query):</label>
+                      <input 
+                        type="text"
+                        value={customSearchUrl}
+                        onChange={(e) => setCustomSearchUrl(e.target.value)}
+                        placeholder="https://kagi.com/search?q={q}"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Background Image */}
+                <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="font-semibold text-slate-200 text-xs block">Background Wallpaper</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'gradient', label: 'Obsidian Glow' },
+                      { id: 'bing', label: 'Bing Daily Rotation' },
+                      { id: 'mountain', label: 'Misty Mountains' },
+                      { id: 'cosmic', label: 'Deep Nebula' },
+                      { id: 'custom', label: 'Custom URL' }
+                    ].map(bg => (
+                      <button
+                        key={bg.id}
+                        type="button"
+                        onClick={() => setBgType(bg.id as any)}
+                        className={`py-1.5 px-2 rounded-lg border text-xs font-medium text-center transition cursor-pointer ${
+                          bgType === bg.id
+                            ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-semibold shadow-sm'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {bg.label}
+                      </button>
+                    ))}
+                  </div>
+                  {bgType === 'custom' && (
+                    <div className="mt-2 space-y-1">
+                      <label className="text-[10.5px] text-slate-400">Custom Image URL:</label>
+                      <input 
+                        type="url"
+                        value={customBgUrl}
+                        onChange={(e) => setCustomBgUrl(e.target.value)}
+                        placeholder="https://example.com/wallpaper.jpg"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Live Clock Applet Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div>
+                    <span className="font-semibold text-slate-200 text-xs block">Live Clock Applet</span>
+                    <span className="text-[10.5px] text-slate-400">Draggable modal with IP/location time</span>
+                  </div>
+                  <button
+                    onClick={() => setShowClockApplet(!showClockApplet)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                      showClockApplet ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
+                  </button>
+                </div>
+
+                {/* 4. Live Weather Applet Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div>
+                    <span className="font-semibold text-slate-200 text-xs block">Live Weather Applet</span>
+                    <span className="text-[10.5px] text-slate-400">Draggable modal with IP/location weather</span>
+                  </div>
+                  <button
+                    onClick={() => setShowWeatherApplet(!showWeatherApplet)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                      showWeatherApplet ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
+                  </button>
+                </div>
+
+                {/* 5. Extension Setting: New Tab Override */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div>
+                    <span className="font-semibold text-slate-200 text-xs block">New Tab Override</span>
+                    <span className="text-[10.5px] text-slate-400">Disabled by default per extension setting</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !newTabOverrideEnabled;
+                      setNewTabOverrideEnabled(next);
+                      showNotification(next ? 'New Tab Override Enabled' : 'New Tab Override Disabled');
+                    }}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                      newTabOverrideEnabled ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    onClick={() => {
+                      setClockPos({ x: 24, y: 28 });
+                      setWeatherPos({ x: 24, y: 175 });
+                      showNotification('Applet positions reset');
+                    }}
+                    className="text-slate-400 hover:text-slate-200 text-xs underline cursor-pointer"
+                  >
+                    Reset Applet Positions
+                  </button>
+                  <button
+                    onClick={() => setIsConfigModalOpen(false)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-xs shadow-lg shadow-blue-600/30 transition cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

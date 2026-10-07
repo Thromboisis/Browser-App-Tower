@@ -176,17 +176,20 @@ export const InstallGuide: React.FC = () => {
           <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 font-semibold text-blue-400">
               <Layout className="w-4 h-4 flex-shrink-0" />
-              <span>How can the sidebar show on the New Tab page?</span>
+              <span>How does the New Tab Override & Settings work?</span>
             </div>
             <p className="text-slate-300 leading-relaxed">
-              There are two official methods in Chrome extensions:
+              App Tower includes full extension customization and a dedicated New Tab dashboard:
             </p>
             <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
               <li>
-                <strong className="text-slate-200">New Tab Override:</strong> We can register a custom <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">newtab.html</code> page via <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">chrome_url_overrides</code> in the manifest so opening a new tab loads a custom page with the App Tower dock and a search bar.
+                <strong className="text-slate-200">New Tab Override (Disabled by default):</strong> You can turn this setting on in the gear settings menu to replace Chrome's blank tab with your customizable search engine, Bing daily wallpapers, and draggable live clock & weather modals.
               </li>
               <li>
-                <strong className="text-slate-200">Chrome Side Panel API:</strong> Using <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">chrome.sidePanel</code> to embed the dock into Chrome's native browser side panel UI, which stays visible across all tabs.
+                <strong className="text-slate-200">Custom Sidebar Width & Color:</strong> Adjust the rail width (36px to 72px) and choose between Obsidian, Navy, Charcoal, Black, or custom hex colors.
+              </li>
+              <li>
+                <strong className="text-slate-200">Live Clock & Weather Applets:</strong> Draggable cards on the New Tab page that automatically resolve time and weather based on your current IP/location.
               </li>
             </ul>
           </div>

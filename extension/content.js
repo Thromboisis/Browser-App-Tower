@@ -38,12 +38,14 @@
       return;
     }
 
-    // 1. Reserve 44px on right edge of page content (Strictly Non-Floating)
-    const DOCK_WIDTH = 44;
+    // 1. Reserve dock margin on right edge of page content (Strictly Non-Floating)
+    let currentDockWidth = 44;
+    let currentDockColor = '#12141a';
+    let newTabOverrideEnabled = false;
     const originalMarginRight = document.documentElement.style.marginRight || '';
 
     function reserveDockMargin() {
-      document.documentElement.style.setProperty('margin-right', `${DOCK_WIDTH}px`, 'important');
+      document.documentElement.style.setProperty('margin-right', `${currentDockWidth}px`, 'important');
       document.documentElement.style.setProperty('box-sizing', 'border-box', 'important');
     }
 
@@ -52,6 +54,21 @@
         document.documentElement.style.marginRight = originalMarginRight;
       } else {
         document.documentElement.style.removeProperty('margin-right');
+      }
+    }
+
+    function updateDockStyles() {
+      if (host) {
+        host.style.setProperty('--dock-width', `${currentDockWidth}px`);
+        host.style.setProperty('--bg-primary', currentDockColor);
+      }
+      if (dock) {
+        dock.style.setProperty('--dock-width', `${currentDockWidth}px`);
+        dock.style.setProperty('--bg-primary', currentDockColor);
+        dock.style.background = currentDockColor;
+      }
+      if (isDockVisible) {
+        reserveDockMargin();
       }
     }
 
@@ -228,8 +245,38 @@
         stroke-width: 2.2;
       }
 
+      /* Clean gear settings button */
+      .dock-btn-settings {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-muted) !important;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: default !important;
+        padding: 0;
+        outline: none;
+        transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+      }
+
+      .dock-btn-settings:hover {
+        background: var(--bg-hover) !important;
+        color: var(--text-primary) !important;
+        transform: rotate(35deg);
+        cursor: default !important;
+      }
+
+      .dock-btn-settings svg {
+        width: 17px;
+        height: 17px;
+      }
+
       /* Hover Tooltips */
-      .dock-btn::before {
+      .dock-btn::before,
+      .dock-btn-settings::before {
         content: attr(data-tooltip);
         position: absolute;
         right: 48px;
@@ -251,7 +298,8 @@
         z-index: 2147483647;
       }
 
-      .dock-btn:hover::before {
+      .dock-btn:hover::before,
+      .dock-btn-settings:hover::before {
         opacity: 1;
         transform: translateY(-50%) translateX(0);
       }
@@ -659,6 +707,140 @@
         opacity: 1 !important;
         transform: translateY(0) !important;
       }
+
+      /* Extension Settings Card */
+      .settings-modal-card {
+        pointer-events: auto !important;
+        position: fixed !important;
+        right: 56px !important;
+        bottom: 24px !important;
+        width: 360px !important;
+        max-width: calc(100vw - 70px) !important;
+        background: #161922 !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+        padding: 16px !important;
+        z-index: 2147483647 !important;
+        display: none !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        color: #f8fafc !important;
+        box-sizing: border-box !important;
+        animation: modalSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      }
+
+      .settings-modal-card.open {
+        display: flex !important;
+      }
+
+      .settings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .settings-section-block {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .settings-section-block:last-of-type {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .settings-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #f1f5f9;
+      }
+
+      .settings-subtext {
+        font-size: 11px;
+        color: #94a3b8;
+        line-height: 1.35;
+      }
+
+      .settings-toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 22px;
+        flex-shrink: 0;
+      }
+
+      .settings-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .settings-slider-round {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #334155;
+        transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 22px;
+      }
+
+      .settings-slider-round:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 50%;
+      }
+
+      .settings-toggle-switch input:checked + .settings-slider-round {
+        background-color: #3b82f6;
+      }
+
+      .settings-toggle-switch input:checked + .settings-slider-round:before {
+        transform: translateX(18px);
+      }
+
+      .settings-color-swatches {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .settings-swatch {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+        padding: 0;
+        outline: none;
+      }
+
+      .settings-swatch:hover {
+        transform: scale(1.1);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+
+      .settings-swatch.active {
+        border-color: #60a5fa;
+        transform: scale(1.15);
+        box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+      }
     `;
     shadow.appendChild(styleTag);
 
@@ -688,11 +870,19 @@
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
         </button>
+        <!-- Gear settings button for Sidebar Width, Color, New Tab Override -->
+        <button class="dock-btn-settings" id="btn-dock-settings" data-tooltip="Sidebar & Tab Settings" title="Sidebar & Tab Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
       </div>
     `;
 
     const appListContainer = dock.querySelector('#app-list-container');
     const btnAddApp = dock.querySelector('#btn-add-app');
+    const btnDockSettings = dock.querySelector('#btn-dock-settings');
 
     // Context Menu Element
     const contextMenu = document.createElement('div');
@@ -723,6 +913,14 @@
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
         </svg>
         Remove App
+      </button>
+      <div class="dock-divider" style="margin: 4px 0; width: 100%;"></div>
+      <button class="context-menu-item" id="menu-btn-open-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Sidebar Settings
       </button>
     `;
 
@@ -826,6 +1024,154 @@
     shadow.appendChild(menuToast);
     shadow.appendChild(modalBackdrop);
     shadow.appendChild(modalCard);
+
+    // Sidebar & Tab Settings Modal Dialog Card
+    const settingsCard = document.createElement('div');
+    settingsCard.className = 'settings-modal-card';
+    settingsCard.id = 'settings-modal-card';
+    settingsCard.innerHTML = `
+      <div class="modal-drag-header" id="settings-drag-header">
+        <div class="modal-title-group">
+          <span class="modal-drag-handle">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </span>
+          <h3 class="modal-title">Sidebar & Tab Settings</h3>
+        </div>
+        <button class="modal-close-btn" id="settings-btn-close" title="Close">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-section-block">
+        <div class="settings-row">
+          <div>
+            <span class="settings-label">New Tab Override</span>
+            <p class="settings-subtext">Replace standard new tab with App Tower. (Disabled by default)</p>
+          </div>
+          <label class="settings-toggle-switch">
+            <input type="checkbox" id="settings-toggle-override">
+            <span class="settings-slider-round"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section-block">
+        <div class="settings-row">
+          <span class="settings-label">Sidebar Width</span>
+          <span class="view-mode-badge" id="settings-badge-width">44px</span>
+        </div>
+        <input type="range" id="settings-input-width" min="36" max="72" value="44" style="width: 100%; accent-color: #3b82f6; margin-top: 4px; cursor: pointer;">
+      </div>
+
+      <div class="settings-section-block">
+        <span class="settings-label">Sidebar Color</span>
+        <div class="settings-color-swatches" id="settings-color-swatches">
+          <button type="button" class="settings-swatch active" data-color="#12141a" style="background: #12141a;" title="Obsidian"></button>
+          <button type="button" class="settings-swatch" data-color="#0f172a" style="background: #0f172a;" title="Navy"></button>
+          <button type="button" class="settings-swatch" data-color="#18181b" style="background: #18181b;" title="Charcoal"></button>
+          <button type="button" class="settings-swatch" data-color="#000000" style="background: #000000;" title="True Black"></button>
+          <button type="button" class="settings-swatch" data-color="#1e293b" style="background: #1e293b;" title="Slate Gray"></button>
+          <button type="button" class="settings-swatch" data-color="#151226" style="background: #151226;" title="Deep Indigo"></button>
+          <input type="color" id="settings-input-custom-color" value="#12141a" style="width: 24px; height: 24px; padding: 0; border: none; border-radius: 6px; cursor: pointer; background: none;" title="Custom Color">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" id="settings-btn-done" style="width: 100%;">Done</button>
+      </div>
+    `;
+
+    shadow.appendChild(settingsCard);
+
+    // Settings Modal Elements
+    const settingsBtnClose = settingsCard.querySelector('#settings-btn-close');
+    const settingsBtnDone = settingsCard.querySelector('#settings-btn-done');
+    const settingsToggleOverride = settingsCard.querySelector('#settings-toggle-override');
+    const settingsInputWidth = settingsCard.querySelector('#settings-input-width');
+    const settingsBadgeWidth = settingsCard.querySelector('#settings-badge-width');
+    const settingsSwatches = settingsCard.querySelectorAll('.settings-swatch');
+    const settingsCustomColor = settingsCard.querySelector('#settings-input-custom-color');
+    const menuBtnOpenSettings = contextMenu.querySelector('#menu-btn-open-settings');
+
+    function openSettingsModal() {
+      closeContextMenu();
+      closeAppModal();
+      settingsToggleOverride.checked = !!newTabOverrideEnabled;
+      settingsInputWidth.value = String(currentDockWidth);
+      settingsBadgeWidth.textContent = `${currentDockWidth}px`;
+
+      settingsSwatches.forEach(s => {
+        if (s.getAttribute('data-color') === currentDockColor) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+      if (settingsCustomColor) settingsCustomColor.value = currentDockColor;
+
+      modalBackdrop.classList.add('open');
+      settingsCard.classList.add('open');
+    }
+
+    function closeSettingsModal() {
+      modalBackdrop.classList.remove('open');
+      settingsCard.classList.remove('open');
+    }
+
+    btnDockSettings.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSettingsModal();
+    });
+
+    if (menuBtnOpenSettings) {
+      menuBtnOpenSettings.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSettingsModal();
+      });
+    }
+
+    settingsBtnClose.addEventListener('click', closeSettingsModal);
+    settingsBtnDone.addEventListener('click', closeSettingsModal);
+
+    settingsToggleOverride.addEventListener('change', () => {
+      newTabOverrideEnabled = settingsToggleOverride.checked;
+      chrome.storage.local.set({ new_tab_override_enabled: newTabOverrideEnabled });
+      showToast(newTabOverrideEnabled ? 'New Tab Enabled' : 'New Tab Disabled');
+    });
+
+    settingsInputWidth.addEventListener('input', () => {
+      const val = parseInt(settingsInputWidth.value, 10);
+      currentDockWidth = val;
+      settingsBadgeWidth.textContent = `${val}px`;
+      updateDockStyles();
+      chrome.storage.local.set({ dock_width: val });
+    });
+
+    settingsSwatches.forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const color = swatch.getAttribute('data-color');
+        if (color) {
+          currentDockColor = color;
+          updateDockStyles();
+          chrome.storage.local.set({ dock_color: color });
+          settingsSwatches.forEach(s => s.classList.toggle('active', s === swatch));
+        }
+      });
+    });
+
+    if (settingsCustomColor) {
+      settingsCustomColor.addEventListener('input', () => {
+        currentDockColor = settingsCustomColor.value;
+        updateDockStyles();
+        chrome.storage.local.set({ dock_color: currentDockColor });
+      });
+    }
 
     // Toast feedback helper (Strictly says "Updated" or "Added")
     let toastTimer = null;
@@ -1398,7 +1744,18 @@
     });
 
     // 13. Initialize on Load
-    chrome.storage.local.get(['dock_apps', 'dock_collapsed'], (data) => {
+    chrome.storage.local.get(['dock_apps', 'dock_collapsed', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
+      if (typeof data.dock_width === 'number') {
+        currentDockWidth = data.dock_width;
+      }
+      if (data.dock_color) {
+        currentDockColor = data.dock_color;
+      }
+      if (typeof data.new_tab_override_enabled === 'boolean') {
+        newTabOverrideEnabled = data.new_tab_override_enabled;
+      }
+      updateDockStyles();
+
       if (data.dock_apps && Array.isArray(data.dock_apps) && data.dock_apps.length > 0) {
         currentApps = data.dock_apps;
       }
@@ -1417,7 +1774,7 @@
       });
     });
 
-    // Listen for cross-tab storage changes (e.g., app reordering, apps added/edited, or dock toggle)
+    // Listen for cross-tab storage changes (e.g., app reordering, apps added/edited, dock toggle, width/color changes)
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
         if (changes.dock_apps && Array.isArray(changes.dock_apps.newValue)) {
@@ -1426,6 +1783,17 @@
         }
         if (changes.dock_collapsed && typeof changes.dock_collapsed.newValue === 'boolean') {
           setDockCollapsed(changes.dock_collapsed.newValue);
+        }
+        if (changes.dock_width && typeof changes.dock_width.newValue === 'number') {
+          currentDockWidth = changes.dock_width.newValue;
+          updateDockStyles();
+        }
+        if (changes.dock_color && typeof changes.dock_color.newValue === 'string') {
+          currentDockColor = changes.dock_color.newValue;
+          updateDockStyles();
+        }
+        if (changes.new_tab_override_enabled && typeof changes.new_tab_override_enabled.newValue === 'boolean') {
+          newTabOverrideEnabled = changes.new_tab_override_enabled.newValue;
         }
       }
     });
