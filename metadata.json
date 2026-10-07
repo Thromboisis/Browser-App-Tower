@@ -1,0 +1,6 @@
+{
+  "name": "Edge App Tower - Chrome Extension",
+  "description": "Microsoft Edge style App Tower sidebar Chrome Extension (Manifest V3) with declarativeNetRequest CSP rules and isolated Shadow DOM.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

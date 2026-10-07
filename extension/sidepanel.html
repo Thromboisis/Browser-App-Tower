@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Tower</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #181b22;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      color: #f1f5f9;
+    }
+
+    /* Edge style top tab bar */
+    header {
+      height: 46px;
+      min-height: 46px;
+      background: #1e222b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .app-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #94a3b8;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #f8fafc;
+    }
+
+    .tab-btn.active {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .tab-btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .action-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f8fafc;
+    }
+
+    .action-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Container for Webviews */
+    .frame-container {
+      flex: 1;
+      width: 100%;
+      height: calc(100% - 46px);
+      position: relative;
+      background: #ffffff;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #ffffff;
+      display: none;
+    }
+
+    iframe.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="app-tabs">
+      <button class="tab-btn active" id="tab-keep" data-app="keep">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 21h6v-1.5H9V21zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z" fill="#FBBF24"/>
+        </svg>
+        <span>Google Keep</span>
+      </button>
+
+      <button class="tab-btn" id="tab-messages" data-app="messages">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" fill="#3B82F6"/>
+          <circle cx="8" cy="10" r="1.5" fill="#3B82F6"/>
+          <circle cx="12" cy="10" r="1.5" fill="#3B82F6"/>
+          <circle cx="16" cy="10" r="1.5" fill="#3B82F6"/>
+        </svg>
+        <span>Messages</span>
+      </button>
+    </div>
+
+    <div class="actions">
+      <button class="action-btn" id="btn-reload" title="Reload app">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+      <button class="action-btn" id="btn-external" title="Open in new tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="frame-container">
+    <iframe 
+      id="frame-keep" 
+      class="active" 
+      src="https://keep.google.com/" 
+      allow="clipboard-read; clipboard-write; microphone; camera; notifications; geolocation; autoplay">
+    </iframe>
+
+    <iframe 
+      id="frame-messages" 
+      src="https://messages.google.com/web" 
+      allow="clipboard-read; clipboard-write; microphone; camera; notifications; geolocation; autoplay">
+    </iframe>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
