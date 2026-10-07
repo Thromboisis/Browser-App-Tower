@@ -8,7 +8,7 @@ export const CodeViewer: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
-  const activeFile = EXTENSION_FILES[activeFileKey] || EXTENSION_FILES['manifest.json'];
+  const activeFile = EXTENSION_FILES.find(f => f.key === activeFileKey) || EXTENSION_FILES[0];
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -165,7 +165,7 @@ export const CodeViewer: React.FC = () => {
         <div className="p-4 overflow-x-auto max-h-[550px] overflow-y-auto leading-relaxed text-slate-200 selection:bg-blue-600/40">
           <pre className="font-mono text-[12px]">
             <code>
-              {activeFile.content.split('\n').map((line, idx) => (
+              {activeFile?.content.split('\n').map((line: string, idx: number) => (
                 <div key={idx} className="table-row hover:bg-slate-900/50">
                   <span className="table-cell pr-4 text-right select-none text-slate-600 text-[11px] w-10 font-mono">
                     {idx + 1}

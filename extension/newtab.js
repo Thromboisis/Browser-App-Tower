@@ -16,7 +16,8 @@
   const banner = document.getElementById('disabled-override-banner');
   const bannerBtnEnable = document.getElementById('banner-btn-enable');
   const gearBtn = document.getElementById('btn-config-gear');
-  const modalBackdrop = document.getElementById('config-modal-backdrop');
+  const modalCard = document.getElementById('config-modal-card');
+  const modalDragHeader = document.getElementById('config-modal-drag-header');
   const modalCloseBtn = document.getElementById('modal-btn-close-config');
   const modalDoneBtn = document.getElementById('modal-btn-done');
   const modalResetPosBtn = document.getElementById('modal-btn-reset-pos');
@@ -446,21 +447,127 @@
     });
   }
 
-  // 8. Settings Modal Open/Close & Interactions
+  // 8. Settings Modal Open/Close, Positioning underneath Gear, & Draggable Interactions
+  let isModalMovableInitialized = false;
+
+  function positionModalUnderneathGear() {
+    if (!modalCard || !gearBtn) return;
+    const gearRect = gearBtn.getBoundingClientRect();
+    const modalWidth = modalCard.offsetWidth || 480;
+    
+    // Position right-aligned underneath the gear icon
+    let leftPos = gearRect.right - modalWidth;
+    let topPos = gearRect.bottom + 12;
+
+    // Viewport clamps
+    leftPos = Math.max(16, Math.min(window.innerWidth - modalWidth - 16, leftPos));
+    topPos = Math.max(16, Math.min(window.innerHeight - 300, topPos));
+
+    modalCard.style.left = `${Math.round(leftPos)}px`;
+    modalCard.style.top = `${Math.round(topPos)}px`;
+    modalCard.style.right = 'auto';
+    modalCard.style.bottom = 'auto';
+  }
+
   function openSettingsModal() {
-    modalBackdrop.classList.add('open');
+    if (!modalCard) return;
+    const isAlreadyOpen = modalCard.classList.contains('open');
+    if (isAlreadyOpen) {
+      closeSettingsModal();
+      return;
+    }
+
+    modalCard.classList.add('open');
+    positionModalUnderneathGear();
+
+    if (!isModalMovableInitialized) {
+      initModalDragging();
+      isModalMovableInitialized = true;
+    }
   }
 
   function closeSettingsModal() {
-    modalBackdrop.classList.remove('open');
+    if (!modalCard) return;
+    modalCard.classList.remove('open');
   }
 
-  if (gearBtn) gearBtn.addEventListener('click', openSettingsModal);
-  if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeSettingsModal);
-  if (modalDoneBtn) modalDoneBtn.addEventListener('click', closeSettingsModal);
+  function initModalDragging() {
+    if (!modalCard || !modalDragHeader) return;
 
-  modalBackdrop.addEventListener('click', (e) => {
-    if (e.target === modalBackdrop) closeSettingsModal();
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+
+    modalDragHeader.addEventListener('mousedown', (e) => {
+      // Don't drag if clicking close button
+      if (e.target.closest('#modal-btn-close-config')) return;
+
+      isDragging = true;
+      modalCard.classList.add('is-dragging');
+
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const rect = modalCard.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      e.preventDefault();
+    });
+
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      let newLeft = initialLeft + dx;
+      let newTop = initialTop + dy;
+
+      const maxLeft = Math.max(10, window.innerWidth - modalCard.offsetWidth - 16);
+      const maxTop = Math.max(10, window.innerHeight - 100);
+
+      newLeft = Math.max(10, Math.min(maxLeft, newLeft));
+      newTop = Math.max(10, Math.min(maxTop, newTop));
+
+      modalCard.style.left = `${Math.round(newLeft)}px`;
+      modalCard.style.top = `${Math.round(newTop)}px`;
+      modalCard.style.right = 'auto';
+      modalCard.style.bottom = 'auto';
+    }
+
+    function onMouseUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      modalCard.classList.remove('is-dragging');
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
+  }
+
+  if (gearBtn) gearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openSettingsModal();
+  });
+  if (modalCloseBtn) modalCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeSettingsModal();
+  });
+  if (modalDoneBtn) modalDoneBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeSettingsModal();
+  });
+
+  // Clicking outside the modal card closes it
+  document.addEventListener('click', (e) => {
+    if (!modalCard || !modalCard.classList.contains('open')) return;
+    if (gearBtn && gearBtn.contains(e.target)) return;
+    if (!modalCard.contains(e.target)) {
+      closeSettingsModal();
+    }
   });
 
   if (bannerBtnEnable) {

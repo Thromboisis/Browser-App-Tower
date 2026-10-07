@@ -229,6 +229,7 @@
         cursor: default !important;
         padding: 0;
         outline: none;
+        position: relative !important;
         transition: transform 0.15s ease, opacity 0.15s ease;
       }
 
@@ -259,27 +260,33 @@
         cursor: default !important;
         padding: 0;
         outline: none;
-        transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+        position: relative !important;
+        transition: color 0.15s ease, background 0.15s ease;
       }
 
       .dock-btn-settings:hover {
         background: var(--bg-hover) !important;
         color: var(--text-primary) !important;
-        transform: rotate(35deg);
         cursor: default !important;
       }
 
       .dock-btn-settings svg {
         width: 17px;
         height: 17px;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      /* Hover Tooltips */
+      .dock-btn-settings:hover svg {
+        transform: rotate(35deg);
+      }
+
+      /* Hover Tooltips - Appears instantly to the left of the button, perfectly horizontal */
       .dock-btn::before,
-      .dock-btn-settings::before {
+      .dock-btn-settings::before,
+      .dock-btn-add::before {
         content: attr(data-tooltip);
         position: absolute;
-        right: 48px;
+        right: calc(100% + 8px);
         top: 50%;
         transform: translateY(-50%) translateX(4px);
         background: #1e222d;
@@ -299,7 +306,8 @@
       }
 
       .dock-btn:hover::before,
-      .dock-btn-settings:hover::before {
+      .dock-btn-settings:hover::before,
+      .dock-btn-add:hover::before {
         opacity: 1;
         transform: translateY(-50%) translateX(0);
       }

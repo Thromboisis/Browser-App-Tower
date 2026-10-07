@@ -192,6 +192,11 @@ export const LiveSimulator: React.FC = () => {
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configModalPos, setConfigModalPos] = useState<{ right: number; top: number }>({ right: 20, top: 48 });
+  const [isDraggingConfigModal, setIsDraggingConfigModal] = useState(false);
+  const configModalDragStart = useRef<{ startX: number; startY: number; initRight: number; initTop: number }>({
+    startX: 0, startY: 0, initRight: 20, initTop: 48
+  });
   const [bypassDisabledNotice, setBypassDisabledNotice] = useState(false);
 
   // Time & Location state
@@ -245,6 +250,30 @@ export const LiveSimulator: React.FC = () => {
       };
     }
   }, [draggingApplet]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingConfigModal) return;
+      const dx = e.clientX - configModalDragStart.current.startX;
+      const dy = e.clientY - configModalDragStart.current.startY;
+      const newRight = Math.max(12, Math.min(650, configModalDragStart.current.initRight - dx));
+      const newTop = Math.max(12, Math.min(350, configModalDragStart.current.initTop + dy));
+      setConfigModalPos({ right: newRight, top: newTop });
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingConfigModal) setIsDraggingConfigModal(false);
+    };
+
+    if (isDraggingConfigModal) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDraggingConfigModal]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -1184,27 +1213,6 @@ export const LiveSimulator: React.FC = () => {
                       </div>
                     </form>
 
-                    {/* Quick Shortcuts */}
-                    <div className="grid grid-cols-6 gap-3 w-full">
-                      {[
-                        { name: 'Google', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
-                        { name: 'YouTube', color: 'bg-rose-600/10 text-rose-400 border-rose-500/20' },
-                        { name: 'Gmail', color: 'bg-red-600/10 text-red-400 border-red-500/20' },
-                        { name: 'GitHub', color: 'bg-slate-800 text-slate-200 border-slate-700' },
-                        { name: 'Calendar', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
-                        { name: 'Reddit', color: 'bg-orange-600/10 text-orange-400 border-orange-500/20' },
-                      ].map((item) => (
-                        <div key={item.name} className="flex flex-col items-center gap-1.5 group cursor-pointer">
-                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border font-bold text-xs shadow-md transition-transform group-hover:scale-105 ${item.color}`}>
-                            {item.name[0]}
-                          </div>
-                          <span className="text-[10.5px] text-slate-400 group-hover:text-slate-200 transition font-medium">
-                            {item.name}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
                     <div className="text-[11px] text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                       <span>App Tower Dock active on New Tab page</span>
@@ -1307,40 +1315,46 @@ export const LiveSimulator: React.FC = () => {
                     {/* Placeholder dotted square before icon when moving upwards */}
                     {showPlaceholderBefore && renderDropPlaceholder(app.id)}
 
-                    <button
-                      draggable
-                      onDragStart={(e) => handleAppDragStart(e, app.id)}
-                      onDragOver={(e) => handleAppDragOver(e, app.id)}
-                      onDragLeave={handleAppDragLeave}
-                      onDrop={(e) => handleAppDrop(e, app.id)}
-                      onDragEnd={handleAppDragEnd}
-                      onClick={() => {
-                        if (activeAppId === app.id) {
-                          setActiveAppId(null);
-                        } else {
-                          setActiveAppId(app.id);
-                          showNotification(`Opened ${app.name} (${app.isMobile ? 'Mobile UA' : 'Desktop UA'})`);
-                        }
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const parentRect = e.currentTarget.parentElement?.getBoundingClientRect() || { top: 0 };
-                        setContextMenu({
-                          app,
-                          topPos: Math.max(12, rect.top - parentRect.top)
-                        });
-                      }}
-                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-default ${
-                        isBeingDragged
-                          ? 'opacity-30 scale-90 border border-blue-400/50'
-                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
-                      }`}
-                      title={`${app.name} (${app.isMobile ? 'Mobile UA' : 'Desktop UA'} • Drag to re-order • Right-click to edit)`}
-                    >
-                      {renderAppIcon(app)}
-                    </button>
+                    <div className="relative group flex items-center justify-center">
+                      <button
+                        draggable
+                        onDragStart={(e) => handleAppDragStart(e, app.id)}
+                        onDragOver={(e) => handleAppDragOver(e, app.id)}
+                        onDragLeave={handleAppDragLeave}
+                        onDrop={(e) => handleAppDrop(e, app.id)}
+                        onDragEnd={handleAppDragEnd}
+                        onClick={() => {
+                          if (activeAppId === app.id) {
+                            setActiveAppId(null);
+                          } else {
+                            setActiveAppId(app.id);
+                            showNotification(`Opened ${app.name} (${app.isMobile ? 'Mobile UA' : 'Desktop UA'})`);
+                          }
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const parentRect = e.currentTarget.parentElement?.getBoundingClientRect() || { top: 0 };
+                          setContextMenu({
+                            app,
+                            topPos: Math.max(12, rect.top - parentRect.top)
+                          });
+                        }}
+                        className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-default ${
+                          isBeingDragged
+                            ? 'opacity-30 scale-90 border border-blue-400/50'
+                            : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
+                        }`}
+                      >
+                        {renderAppIcon(app)}
+                      </button>
+
+                      {/* Instant Hover Badge positioned to the left of app icon */}
+                      <div className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-x-1 group-hover:translate-x-0 z-50 bg-[#1e222d] text-slate-100 text-[11px] font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-xl border border-white/10">
+                        {app.name} ({app.isMobile ? 'Mobile' : 'Desktop'} • Drag to re-order)
+                      </div>
+                    </div>
 
                     {/* Placeholder dotted square after icon when moving downwards */}
                     {showPlaceholderAfter && renderDropPlaceholder(app.id)}
@@ -1349,35 +1363,44 @@ export const LiveSimulator: React.FC = () => {
               })}
 
               {/* WHITE PLUS ICON AT BOTTOM OF ICON LIST (NO BACKGROUND, PURE WHITE SYMBOL) */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setContextMenu(null);
-                  openAddAppModal();
-                }}
-                className="mt-1.5 w-8 h-8 flex items-center justify-center cursor-default transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  boxShadow: 'none'
-                }}
-                title="Add App to Sidebar"
-              >
-                <Plus className="w-5 h-5 text-white" strokeWidth={2.6} />
-              </button>
+              <div className="relative group flex items-center justify-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setContextMenu(null);
+                    openAddAppModal();
+                  }}
+                  className="mt-1.5 w-8 h-8 flex items-center justify-center cursor-default transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none'
+                  }}
+                >
+                  <Plus className="w-5 h-5 text-white" strokeWidth={2.6} />
+                </button>
+                <div className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-x-1 group-hover:translate-x-0 z-50 bg-[#1e222d] text-slate-100 text-[11px] font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-xl border border-white/10">
+                  Add App to Sidebar
+                </div>
+              </div>
 
               {/* EXTENSION SETTINGS GEAR BUTTON */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setContextMenu(null);
-                  setIsSettingsModalOpen(true);
-                }}
-                className="mt-1 w-8 h-8 flex items-center justify-center cursor-default transition-all duration-150 hover:rotate-45 text-slate-400 hover:text-white"
-                title="Sidebar & Extension Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              <div className="relative group flex items-center justify-center">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setContextMenu(null);
+                    setIsSettingsModalOpen(true);
+                  }}
+                  className="mt-1 w-8 h-8 flex items-center justify-center cursor-default transition-all duration-150 text-slate-400 group-hover:text-white"
+                >
+                  <Settings className="w-4 h-4 transition-transform duration-200 group-hover:rotate-45" />
+                </button>
+                {/* Instant Hover Badge positioned to the left of the gear icon, without rotating */}
+                <div className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-x-1 group-hover:translate-x-0 z-50 bg-[#1e222d] text-slate-100 text-[11px] font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-xl border border-white/10">
+                  Sidebar & Tab Settings
+                </div>
+              </div>
             </div>
 
             {/* Bottom spacer */}
@@ -1567,18 +1590,41 @@ export const LiveSimulator: React.FC = () => {
             </div>
           )}
 
-          {/* NEW TAB CONFIGURATION MODAL */}
+          {/* NEW TAB CONFIGURATION MODAL (Pops up on right side underneath gear icon, movable, no background blur) */}
           {isConfigModalOpen && (
-            <div 
-              onClick={() => setIsConfigModalOpen(false)}
-              className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
-            >
+            <>
+              {/* Invisible click catcher without background blur */}
+              <div 
+                onClick={() => setIsConfigModalOpen(false)}
+                className="absolute inset-0 z-40 bg-transparent"
+              />
+
               <div 
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-5 space-y-4 text-xs text-slate-200 max-h-[90%] overflow-y-auto"
+                style={{
+                  top: `${configModalPos.top}px`,
+                  right: `${configModalPos.right}px`
+                }}
+                className="absolute z-50 w-[420px] max-w-[calc(100%-32px)] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl space-y-4 text-xs text-slate-200 max-h-[85%] flex flex-col overflow-hidden animate-in fade-in duration-150 select-none"
               >
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                {/* Draggable Modal Header */}
+                <div 
+                  onMouseDown={(e) => {
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    e.preventDefault();
+                    setIsDraggingConfigModal(true);
+                    configModalDragStart.current = {
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      initRight: configModalPos.right,
+                      initTop: configModalPos.top
+                    };
+                  }}
+                  className="px-4 py-3 bg-slate-950/40 border-b border-slate-800 flex items-center justify-between cursor-grab active:cursor-grabbing"
+                  title="Drag to move settings window"
+                >
                   <div className="flex items-center gap-2 font-bold text-sm text-white">
+                    <GripVertical className="w-3.5 h-3.5 text-slate-500" />
                     <Settings className="w-4 h-4 text-blue-400" />
                     <span>New Tab Configuration</span>
                   </div>
@@ -1590,6 +1636,7 @@ export const LiveSimulator: React.FC = () => {
                   </button>
                 </div>
 
+                <div className="p-4 pt-0 space-y-4 overflow-y-auto">
                 {/* 1. Search Provider */}
                 <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
                   <span className="font-semibold text-slate-200 text-xs block">Search Provider</span>
@@ -1726,11 +1773,12 @@ export const LiveSimulator: React.FC = () => {
                     onClick={() => {
                       setClockPos({ x: 24, y: 28 });
                       setWeatherPos({ x: 24, y: 175 });
+                      setConfigModalPos({ right: 20, top: 48 });
                       showNotification('Applet positions reset');
                     }}
                     className="text-slate-400 hover:text-slate-200 text-xs underline cursor-pointer"
                   >
-                    Reset Applet Positions
+                    Reset Positions
                   </button>
                   <button
                     onClick={() => setIsConfigModalOpen(false)}
@@ -1739,8 +1787,9 @@ export const LiveSimulator: React.FC = () => {
                     Done
                   </button>
                 </div>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* ADD / EDIT APP MODAL (Shows to the Left of the Dock, Movable, NO PAGE BLUR) */}
