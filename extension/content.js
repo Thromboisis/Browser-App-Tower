@@ -1413,14 +1413,21 @@
       chrome.runtime.sendMessage({ action: 'get_companion_states' }, (states) => {
         if (states && typeof states === 'object') {
           activeAppWindows = states;
-          for (const [appId, isOpen] of Object.entries(states)) {
-            const btn = shadow.getElementById(`btn-app-${appId}`);
-            if (btn && isOpen) {
-              btn.classList.add('active');
-            }
-          }
         }
       });
+    });
+
+    // Listen for cross-tab storage changes (e.g., app reordering, apps added/edited, or dock toggle)
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local') {
+        if (changes.dock_apps && Array.isArray(changes.dock_apps.newValue)) {
+          currentApps = changes.dock_apps.newValue;
+          renderAppButtons();
+        }
+        if (changes.dock_collapsed && typeof changes.dock_collapsed.newValue === 'boolean') {
+          setDockCollapsed(changes.dock_collapsed.newValue);
+        }
+      }
     });
   }
 

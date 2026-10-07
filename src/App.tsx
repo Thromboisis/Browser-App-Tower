@@ -12,6 +12,7 @@ import {
   FolderArchive, 
   Sparkles, 
   Layers, 
+  PanelRight,
   ExternalLink,
   Github,
   CheckCircle2,
@@ -44,13 +45,8 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 p-[1px] shadow-lg shadow-blue-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-              <div className="grid grid-cols-2 gap-0.5 p-1">
-                <span className="w-1.5 h-1.5 rounded-sm bg-blue-500"></span>
-                <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500"></span>
-                <span className="w-1.5 h-1.5 rounded-sm bg-amber-500"></span>
-                <span className="w-1.5 h-1.5 rounded-sm bg-purple-500"></span>
-              </div>
+            <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center text-blue-400">
+              <PanelRight className="w-4 h-4 text-blue-400" />
             </div>
           </div>
 

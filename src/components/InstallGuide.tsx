@@ -151,6 +151,47 @@ export const InstallGuide: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Chrome Restricted Pages & New Tab FAQ */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+          <HelpCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
+          <span>Chrome Restricted Pages & New Tab Page FAQ</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-amber-400">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>Why doesn't the sidebar show on chrome://newtab?</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              Chromium has an intentional, built-in security boundary that strictly forbids extension content scripts from executing on any internal <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded font-mono">chrome://*</code> pages (like <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded font-mono">chrome://newtab</code> or <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded font-mono">chrome://extensions</code>) and <code className="bg-slate-900 text-amber-300 px-1 py-0.5 rounded font-mono">chromewebstore.google.com</code>.
+            </p>
+            <p className="text-slate-400 leading-relaxed">
+              This is a browser-level security rule designed to protect user settings and prevent script injection into core browser surfaces.
+            </p>
+          </div>
+
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-blue-400">
+              <Layout className="w-4 h-4 flex-shrink-0" />
+              <span>How can the sidebar show on the New Tab page?</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              There are two official methods in Chrome extensions:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
+              <li>
+                <strong className="text-slate-200">New Tab Override:</strong> We can register a custom <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">newtab.html</code> page via <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">chrome_url_overrides</code> in the manifest so opening a new tab loads a custom page with the App Tower dock and a search bar.
+              </li>
+              <li>
+                <strong className="text-slate-200">Chrome Side Panel API:</strong> Using <code className="bg-slate-900 text-blue-300 px-1 py-0.5 rounded font-mono">chrome.sidePanel</code> to embed the dock into Chrome's native browser side panel UI, which stays visible across all tabs.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

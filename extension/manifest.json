@@ -30,6 +30,9 @@
   "background": {
     "service_worker": "background.js"
   },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
   "action": {
     "default_title": "Toggle App Tower Dock",
     "default_icon": {

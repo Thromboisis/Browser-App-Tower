@@ -25,6 +25,7 @@ import {
   Battery,
   Clock,
   Layers,
+  PanelRight,
   Phone,
   Video,
   ArrowLeft,
@@ -101,7 +102,7 @@ export const LiveSimulator: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [useLiveIframe, setUseLiveIframe] = useState(false);
-  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard'>('doc');
+  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab'>('doc');
 
   // Per-App saved window geometry (size & location)
   const [savedBounds, setSavedBounds] = useState<Record<string, WindowBounds>>(() => {
@@ -701,6 +702,7 @@ export const LiveSimulator: React.FC = () => {
               {activeWebsite === 'doc' && 'Google Docs - Product Specification.gdoc'}
               {activeWebsite === 'portal' && 'Internal Developer Hub & API Docs'}
               {activeWebsite === 'dashboard' && 'Analytics & Operations Dashboard'}
+              {activeWebsite === 'newtab' && 'New Tab (App Tower Override)'}
             </span>
           </div>
 
@@ -711,6 +713,7 @@ export const LiveSimulator: React.FC = () => {
                 {activeWebsite === 'doc' && 'https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZj_A...'}
                 {activeWebsite === 'portal' && 'https://portal.internal.company.net/engineering/specs'}
                 {activeWebsite === 'dashboard' && 'https://analytics.workspace.google.com/live/metrics'}
+                {activeWebsite === 'newtab' && 'chrome://newtab'}
               </span>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-2" />
             </div>
@@ -738,6 +741,13 @@ export const LiveSimulator: React.FC = () => {
               >
                 Dashboard
               </button>
+              <button
+                onClick={() => setActiveWebsite('newtab')}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'newtab' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+              >
+                <Plus className="w-2.5 h-2.5" />
+                <span>New Tab</span>
+              </button>
             </div>
 
             {/* EXTENSION ACTION BUTTON IN TOOLBAR (TOGGLE DOCK ON/OFF) */}
@@ -750,7 +760,7 @@ export const LiveSimulator: React.FC = () => {
               }`}
               title="Click extension icon in toolbar to expand or collapse docked sidebar"
             >
-              <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <PanelRight className="w-3.5 h-3.5 text-blue-400" />
               <span>App Tower</span>
               <span className={`w-1.5 h-1.5 rounded-full ${!isDockCollapsed ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
             </button>
@@ -772,64 +782,121 @@ export const LiveSimulator: React.FC = () => {
             }}
             className="flex-1 h-full overflow-y-auto p-8 text-slate-200 relative bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
           >
-            {/* Document / Portal Content Mock */}
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div className="border-b border-slate-800/80 pb-4 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-mono text-blue-400 uppercase tracking-wider">Browser Feature Guide</span>
-                  <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
-                    Mobile vs Desktop User-Agent Switching
-                  </h1>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-                    {apps.length} Apps Active
-                  </span>
-                </div>
-              </div>
-
-              {/* Informative interactive card explaining User-Agent */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
-                  <Sparkles className="w-4 h-4" />
-                  <span>How Websites Detect Mobile vs Desktop:</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
-                  <div className="p-3 rounded-lg bg-slate-950/70 border border-blue-900/30 space-y-1.5">
-                    <span className="font-semibold text-blue-300 flex items-center gap-1.5">
-                      <Monitor className="w-3.5 h-3.5" /> Desktop User-Agent
-                    </span>
-                    <p className="text-slate-400 text-[11px] leading-relaxed">
-                      Sends <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded font-mono">User-Agent: Chrome (Windows 64-bit)</code> and <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded font-mono">Sec-CH-UA-Mobile: ?0</code>.
-                      Websites like Google Messages render their dual-pane desktop web client.
-                    </p>
+            {activeWebsite === 'newtab' ? (
+              /* New Tab Page View */
+              <div className="h-full flex flex-col items-center justify-center -mt-6 space-y-8 select-none">
+                {/* Live Clock & Date */}
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <div className="text-6xl font-extralight tracking-tight text-white font-mono drop-shadow-md">
+                    12:00
                   </div>
-                  <div className="p-3 rounded-lg bg-slate-950/70 border border-emerald-900/30 space-y-1.5">
-                    <span className="font-semibold text-emerald-300 flex items-center gap-1.5">
-                      <Smartphone className="w-3.5 h-3.5" /> Mobile User-Agent
-                    </span>
-                    <p className="text-slate-400 text-[11px] leading-relaxed">
-                      Sends <code className="text-emerald-300 bg-slate-900 px-1 py-0.5 rounded font-mono">User-Agent: Linux; Android Pixel Mobile</code> and <code className="text-emerald-300 bg-slate-900 px-1 py-0.5 rounded font-mono">Sec-CH-UA-Mobile: ?1</code> via declarativeNetRequest.
-                      Websites automatically switch to their dedicated mobile layout!
-                    </p>
+                  <div className="text-xs font-medium text-slate-400">
+                    Wednesday, October 7
                   </div>
                 </div>
-              </div>
 
-              <div className="prose prose-invert text-xs space-y-4 text-slate-300 leading-relaxed">
-                <p>
-                  When you edit an app icon and toggle the <strong>Desktop vs Mobile slider</strong>, the extension configures network rules to send that device's User-Agent on all requests and reloads the window.
-                </p>
-                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs space-y-2">
-                  <div className="font-semibold text-slate-200">Try it out in the simulation:</div>
-                  <ul className="list-disc list-inside space-y-1 text-slate-400 text-[11.5px]">
-                    <li>Right-click <strong>Google Messages</strong> in the sidebar dock, click <strong>Edit app & URL...</strong></li>
-                    <li>Toggle the slider to <strong>Mobile View</strong> and click <strong>Save Changes</strong>.</li>
-                    <li>Notice how Google Messages reloads from the wide dual-pane desktop view into the dedicated single-pane mobile phone interface!</li>
-                  </ul>
+                {/* Google Search Form */}
+                <div className="w-full max-w-xl">
+                  <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 rounded-full px-5 py-3 shadow-xl backdrop-blur-md transition-all">
+                    <Search className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search Google or type a URL..." 
+                      className="bg-transparent border-none outline-none text-sm text-slate-100 placeholder-slate-500 flex-1 font-sans"
+                      defaultValue=""
+                    />
+                    <div className="w-6 h-6 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs">
+                      ↵
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Shortcuts */}
+                <div className="grid grid-cols-6 gap-4 w-full max-w-lg">
+                  {[
+                    { name: 'Google', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
+                    { name: 'YouTube', color: 'bg-rose-600/10 text-rose-400 border-rose-500/20' },
+                    { name: 'Gmail', color: 'bg-red-600/10 text-red-400 border-red-500/20' },
+                    { name: 'GitHub', color: 'bg-slate-800 text-slate-200 border-slate-700' },
+                    { name: 'Calendar', color: 'bg-blue-600/10 text-blue-400 border-blue-500/20' },
+                    { name: 'Reddit', color: 'bg-orange-600/10 text-orange-400 border-orange-500/20' },
+                  ].map((item) => (
+                    <div key={item.name} className="flex flex-col items-center gap-2 group cursor-pointer">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border font-bold text-xs shadow-md transition-transform group-hover:scale-105 ${item.color}`}>
+                        {item.name[0]}
+                      </div>
+                      <span className="text-[11px] text-slate-400 group-hover:text-slate-200 transition font-medium">
+                        {item.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-[11px] text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>App Tower Dock is active & docked on the New Tab page!</span>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* Document / Portal Content Mock */
+              <div className="max-w-3xl mx-auto space-y-6">
+                <div className="border-b border-slate-800/80 pb-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-mono text-blue-400 uppercase tracking-wider">Browser Feature Guide</span>
+                    <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
+                      Mobile vs Desktop User-Agent Switching
+                    </h1>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                      {apps.length} Apps Active
+                    </span>
+                  </div>
+                </div>
+
+                {/* Informative interactive card explaining User-Agent */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm">
+                    <Sparkles className="w-4 h-4" />
+                    <span>How Websites Detect Mobile vs Desktop:</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
+                    <div className="p-3 rounded-lg bg-slate-950/70 border border-blue-900/30 space-y-1.5">
+                      <span className="font-semibold text-blue-300 flex items-center gap-1.5">
+                        <Monitor className="w-3.5 h-3.5" /> Desktop User-Agent
+                      </span>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">
+                        Sends <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded font-mono">User-Agent: Chrome (Windows 64-bit)</code> and <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded font-mono">Sec-CH-UA-Mobile: ?0</code>.
+                        Websites like Google Messages render their dual-pane desktop web client.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-slate-950/70 border border-emerald-900/30 space-y-1.5">
+                      <span className="font-semibold text-emerald-300 flex items-center gap-1.5">
+                        <Smartphone className="w-3.5 h-3.5" /> Mobile User-Agent
+                      </span>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">
+                        Sends <code className="text-emerald-300 bg-slate-900 px-1 py-0.5 rounded font-mono">User-Agent: Linux; Android Pixel Mobile</code> and <code className="text-emerald-300 bg-slate-900 px-1 py-0.5 rounded font-mono">Sec-CH-UA-Mobile: ?1</code> via declarativeNetRequest.
+                        Websites automatically switch to their dedicated mobile layout!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="prose prose-invert text-xs space-y-4 text-slate-300 leading-relaxed">
+                  <p>
+                    When you edit an app icon and toggle the <strong>Desktop vs Mobile slider</strong>, the extension configures network rules to send that device's User-Agent on all requests and reloads the window.
+                  </p>
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs space-y-2">
+                    <div className="font-semibold text-slate-200">Try it out in the simulation:</div>
+                    <ul className="list-disc list-inside space-y-1 text-slate-400 text-[11.5px]">
+                      <li>Right-click <strong>Google Messages</strong> in the sidebar dock, click <strong>Edit app & URL...</strong></li>
+                      <li>Toggle the slider to <strong>Mobile View</strong> and click <strong>Save Changes</strong>.</li>
+                      <li>Notice how Google Messages reloads from the wide dual-pane desktop view into the dedicated single-pane mobile phone interface!</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
 
           {/* FIRMLY DOCKED 44px SIDEBAR RAIL (On right edge) */}
