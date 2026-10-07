@@ -129,7 +129,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
+        cursor: default !important;
         transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
         position: relative;
         padding: 0;
@@ -146,27 +146,11 @@
       .dock-btn:hover {
         background: var(--bg-hover);
         color: var(--text-primary);
-      }
-
-      .dock-btn.active {
-        background: var(--bg-active);
-        color: var(--accent-blue);
-      }
-
-      .dock-btn.active::after {
-        content: '';
-        position: absolute;
-        right: -6px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 14px;
-        background: var(--accent-blue);
-        border-radius: 2px 0 0 2px;
+        cursor: default !important;
       }
 
       .dock-btn[draggable="true"] {
-        cursor: grab;
+        cursor: default !important;
       }
 
       .dock-btn.dragging {
@@ -190,6 +174,7 @@
         justify-content: center;
         animation: dock-placeholder-pulse 1.4s ease-in-out infinite;
         flex-shrink: 0;
+        cursor: default !important;
       }
 
       .dock-drop-placeholder::after {
@@ -224,7 +209,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
+        cursor: default !important;
         padding: 0;
         outline: none;
         transition: transform 0.15s ease, opacity 0.15s ease;
@@ -233,6 +218,7 @@
       .dock-btn-add:hover {
         opacity: 0.85;
         transform: scale(1.12);
+        cursor: default !important;
       }
 
       .dock-btn-add svg {
@@ -961,10 +947,6 @@
         btn.setAttribute('data-tooltip', `${app.name} (${modeText} • Drag to re-order)`);
         btn.innerHTML = getAppIconSvg(app);
 
-        if (activeAppWindows[app.id]) {
-          btn.classList.add('active');
-        }
-
         // Drag and drop events for re-arranging icons
         btn.addEventListener('dragstart', (e) => {
           draggedAppId = app.id;
@@ -1406,14 +1388,6 @@
 
       if (message.action === 'companion_state_changed') {
         activeAppWindows[message.app] = message.isOpen;
-        const btn = shadow.getElementById(`btn-app-${message.app}`);
-        if (btn) {
-          if (message.isOpen) {
-            btn.classList.add('active');
-          } else {
-            btn.classList.remove('active');
-          }
-        }
         return true;
       }
     });

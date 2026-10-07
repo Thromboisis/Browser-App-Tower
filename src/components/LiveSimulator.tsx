@@ -625,7 +625,7 @@ export const LiveSimulator: React.FC = () => {
       key={`placeholder-${targetAppId}`}
       onDragOver={(e) => handleAppDragOver(e, targetAppId)}
       onDrop={(e) => handleAppDrop(e, targetAppId)}
-      className="w-9 h-9 my-0.5 rounded-lg border-2 border-dotted border-blue-400 bg-blue-500/15 flex items-center justify-center transition-all animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.35)] select-none shrink-0"
+      className="w-9 h-9 my-0.5 rounded-lg border-2 border-dotted border-blue-400 bg-blue-500/15 flex items-center justify-center transition-all animate-pulse shadow-[0_0_12px_rgba(59,130,246,0.35)] select-none shrink-0 cursor-default"
       title="Drop icon here"
     >
       <div className="w-3.5 h-3.5 rounded border border-dotted border-blue-300/80 bg-blue-400/20" />
@@ -888,21 +888,14 @@ export const LiveSimulator: React.FC = () => {
                           topPos: Math.max(12, rect.top - parentRect.top)
                         });
                       }}
-                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-grab active:cursor-grabbing ${
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-default ${
                         isBeingDragged
                           ? 'opacity-30 scale-90 border border-blue-400/50'
-                          : isActive 
-                          ? 'bg-slate-800 text-white ring-1 ring-blue-500/60 shadow-md' 
-                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white hover:scale-105'
+                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
                       }`}
                       title={`${app.name} (${app.isMobile ? 'Mobile UA' : 'Desktop UA'} • Drag to re-order • Right-click to edit)`}
                     >
                       {renderAppIcon(app)}
-
-                      {/* Active accent pip */}
-                      {isActive && (
-                        <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-3.5 bg-blue-500 rounded-l shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
-                      )}
                     </button>
 
                     {/* Placeholder dotted square after icon when moving downwards */}
@@ -918,7 +911,7 @@ export const LiveSimulator: React.FC = () => {
                   setContextMenu(null);
                   openAddAppModal();
                 }}
-                className="mt-1.5 w-8 h-8 flex items-center justify-center cursor-pointer transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
+                className="mt-1.5 w-8 h-8 flex items-center justify-center cursor-default transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
                 style={{
                   background: 'transparent',
                   border: 'none',
