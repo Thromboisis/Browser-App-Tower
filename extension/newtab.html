@@ -41,27 +41,27 @@
           <circle cx="8" cy="18" r="1.5"></circle>
           <circle cx="16" cy="18" r="1.5"></circle>
         </svg>
-        <span class="applet-title">Live Clock</span>
       </div>
-      <div class="applet-badge">
+      <span class="applet-title">Live Clock</span>
+      <div class="applet-header-badge" id="clock-loc-badge">
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2a8 8 0 0 0-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 0 0-8-8z"></path>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
           <circle cx="12" cy="10" r="3"></circle>
         </svg>
-        <span id="clock-location-text">Local</span>
+        <span id="clock-loc-text">Locating...</span>
       </div>
     </div>
-    <div class="clock-body">
-      <div class="clock-digits">
-        <span id="clock-time-val">12:00</span>
-        <span id="clock-ampm" class="clock-ampm">PM</span>
+    <div class="applet-body clock-body">
+      <div class="clock-time-row">
+        <span id="live-clock-time" class="clock-digits">--:--</span>
+        <span id="live-clock-ampm" class="clock-ampm">--</span>
       </div>
-      <div id="clock-date-val" class="clock-date">Thursday, Oct 8</div>
+      <p id="live-clock-date" class="clock-date">Loading date...</p>
     </div>
   </div>
 
   <!-- Draggable Live Weather Applet -->
-  <div id="draggable-weather-applet" class="draggable-applet weather-applet" style="left: 60px; top: 230px;">
+  <div id="draggable-weather-applet" class="draggable-applet weather-applet" style="left: 60px; top: 250px;">
     <div class="applet-drag-header" title="Drag to reposition weather">
       <div class="applet-drag-grip">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -72,146 +72,289 @@
           <circle cx="8" cy="18" r="1.5"></circle>
           <circle cx="16" cy="18" r="1.5"></circle>
         </svg>
-        <span class="applet-title">Live Weather</span>
       </div>
-      <div class="applet-badge">
-        <span id="weather-location-text">Local Forecast</span>
+      <span class="applet-title">Live Weather</span>
+      <div class="applet-header-badge">
+        <span id="weather-city-badge">Locating...</span>
       </div>
     </div>
-    <div class="weather-body">
+    <div class="applet-body weather-body">
       <div class="weather-main-row">
-        <div class="weather-icon-box">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="m4.93 4.93 1.41 1.41"></path>
-            <path d="m17.66 17.66 1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="m6.34 17.66-1.41 1.41"></path>
-            <path d="m19.07 4.93-1.41 1.41"></path>
+        <div id="weather-icon-container" class="weather-icon">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#60a5fa" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
         </div>
-        <div>
-          <div class="weather-temp-row">
-            <span id="weather-temp-val">72</span>°F
-          </div>
-          <div id="weather-condition-val" class="weather-desc">Sunny / Clear</div>
+        <div class="weather-temp-group">
+          <span id="weather-temp-val" class="weather-temp">--°</span>
+          <span id="weather-condition-text" class="weather-condition">Checking weather...</span>
         </div>
       </div>
-      <div class="weather-meta-row">
-        <span><strong id="weather-wind-val">6</strong> mph wind</span>
-        <span>•</span>
-        <span><strong id="weather-humidity-val">45</strong>% humidity</span>
+      <div class="weather-sub-row">
+        <span id="weather-wind-text">Wind: --</span>
+        <span class="weather-dot">•</span>
+        <span id="weather-humidity-text">Humidity: --%</span>
       </div>
     </div>
   </div>
 
-  <!-- Center Hero Section -->
-  <main class="hero-container">
-    <div class="brand-title">
-      <h1>App Tower</h1>
-      <p>Clean Start Dashboard</p>
+  <!-- Center Main Content -->
+  <div class="newtab-wrapper">
+    <!-- 1. DEFAULT BROWSER VIEW (When App Tower Override is Disabled) -->
+    <div id="default-newtab-view" class="newtab-content default-content">
+      <div class="default-google-logo">
+        <span style="color:#4285F4">G</span><span style="color:#EA4335">o</span><span style="color:#FBBC05">o</span><span style="color:#4285F4">g</span><span style="color:#34A853">l</span><span style="color:#EA4335">e</span>
+      </div>
+      <form id="default-search-form" class="default-search-form" action="https://www.google.com/search" method="GET">
+        <div class="default-search-box">
+          <svg viewBox="0 0 24 24" class="default-search-icon" fill="none" stroke="#9aa0a6" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            name="q" 
+            id="default-search-input" 
+            class="default-search-input" 
+            placeholder="Search Google or type a URL" 
+            autocomplete="off" 
+            spellcheck="false"
+          >
+          <div class="default-search-actions">
+            <!-- Google Mic Icon -->
+            <svg viewBox="0 0 24 24" class="search-action-icon" width="18" height="18" fill="none" stroke="#9aa0a6" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <!-- Google Lens Camera Icon -->
+            <svg viewBox="0 0 24 24" class="search-action-icon" width="18" height="18" fill="none" stroke="#9aa0a6" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+          </div>
+        </div>
+        <div class="default-buttons-row">
+          <button type="submit" class="default-search-btn">Google Search</button>
+          <button type="button" class="default-search-btn" id="btn-default-lucky">I'm Feeling Lucky</button>
+        </div>
+      </form>
     </div>
 
-    <!-- Search Box -->
-    <form id="search-form" class="search-form" action="https://www.google.com/search" method="GET">
-      <div class="search-input-shell">
-        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    <!-- 2. CUSTOM APP TOWER DASHBOARD VIEW (When App Tower Override is Enabled) -->
+    <div id="custom-newtab-view" class="newtab-content custom-content">
+      <!-- Search Form -->
+      <form id="search-form" class="search-form" action="https://www.google.com/search" method="GET">
+        <div class="search-box">
+          <div id="search-provider-icon" class="search-provider-icon" title="Search Provider">
+            <svg viewBox="0 0 24 24" class="search-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            name="q" 
+            id="search-input" 
+            class="search-input" 
+            placeholder="Search the web or type a URL..." 
+            autocomplete="off" 
+            spellcheck="false"
+          >
+          <button type="submit" class="search-submit" title="Search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings Configuration Modal (Movable panel positioned underneath gear on right side) -->
+  <div id="config-modal-card" class="modal-card modal-panel-movable">
+    <div class="modal-header modal-drag-header" id="config-modal-drag-header" title="Drag to move settings window">
+      <div class="modal-header-title">
+        <div class="modal-drag-grip">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <circle cx="8" cy="6" r="1.5"></circle>
+            <circle cx="16" cy="6" r="1.5"></circle>
+            <circle cx="8" cy="12" r="1.5"></circle>
+            <circle cx="16" cy="12" r="1.5"></circle>
+            <circle cx="8" cy="18" r="1.5"></circle>
+            <circle cx="16" cy="18" r="1.5"></circle>
+          </svg>
+        </div>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#3b82f6" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
-        <input id="search-input" name="q" type="text" placeholder="Search the web or type a URL..." autofocus autocomplete="off" />
-        <button type="submit" class="search-submit-btn" aria-label="Search">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-        </button>
+        <h3>New Tab & Extension Settings</h3>
       </div>
-    </form>
-
-    <!-- Quick Shortcuts Grid -->
-    <div id="shortcuts-grid" class="shortcuts-grid"></div>
-
-    <div class="dock-active-badge">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-      </svg>
-      <span>App Tower Sidebar Dock Active</span>
+      <button id="modal-btn-close-config" class="modal-close-btn" title="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
-  </main>
 
-  <!-- Configuration Modal Drawer -->
-  <div id="config-modal-backdrop" class="modal-backdrop">
-    <div id="config-modal" class="config-modal">
-      <div class="modal-header">
-        <div class="modal-title-row">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#3b82f6" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          <h3>New Tab Configuration</h3>
+      <div class="modal-scroll-content">
+        <!-- 1. Extension Setting: Enable/Disable New Tab Override -->
+        <div class="setting-section">
+          <div class="setting-header-row">
+            <div>
+              <span class="setting-title">New Tab Override</span>
+              <p class="setting-desc">Enable or disable replacing Chrome's default new tab with App Tower. (Disabled by default)</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-newtab-override">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-        <button id="btn-close-modal" class="btn-close" aria-label="Close">✕</button>
+
+        <!-- 2. Search Provider -->
+        <div class="setting-section">
+          <span class="setting-title">Search Provider</span>
+          <p class="setting-desc">Choose your preferred search engine or configure a custom search URL.</p>
+          <div class="provider-grid">
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="google">
+              <span class="provider-card">Google</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="duckduckgo">
+              <span class="provider-card">DuckDuckGo</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="bing">
+              <span class="provider-card">Bing</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="ecosia">
+              <span class="provider-card">Ecosia</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="brave">
+              <span class="provider-card">Brave</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="search-provider" value="custom">
+              <span class="provider-card">Custom</span>
+            </label>
+          </div>
+          <div id="custom-search-container" class="custom-input-group" style="display: none;">
+            <label for="custom-search-url" class="input-sublabel">Custom Search URL (use <code>{q}</code> for query):</label>
+            <input type="text" id="custom-search-url" class="setting-text-input" placeholder="https://kagi.com/search?q={q}">
+          </div>
+        </div>
+
+        <!-- 3. Background Image & Bing Daily Rotation -->
+        <div class="setting-section">
+          <span class="setting-title">Background Wallpaper</span>
+          <p class="setting-desc">Select a background aesthetic or enable daily photo rotation from Bing.</p>
+          <div class="bg-options-grid">
+            <label class="bg-option">
+              <input type="radio" name="bg-type" value="gradient">
+              <span class="bg-card">Obsidian Glow</span>
+            </label>
+            <label class="bg-option">
+              <input type="radio" name="bg-type" value="bing">
+              <span class="bg-card">Bing Daily Rotation</span>
+            </label>
+            <label class="bg-option">
+              <input type="radio" name="bg-type" value="mountain">
+              <span class="bg-card">Misty Mountains</span>
+            </label>
+            <label class="bg-option">
+              <input type="radio" name="bg-type" value="cosmic">
+              <span class="bg-card">Deep Nebula</span>
+            </label>
+            <label class="bg-option">
+              <input type="radio" name="bg-type" value="custom">
+              <span class="bg-card">Custom URL</span>
+            </label>
+          </div>
+          <div id="custom-bg-container" class="custom-input-group" style="display: none;">
+            <label for="custom-bg-url" class="input-sublabel">Custom Image URL:</label>
+            <input type="url" id="custom-bg-url" class="setting-text-input" placeholder="https://example.com/wallpaper.jpg">
+          </div>
+        </div>
+
+        <!-- 4. Draggable Live Clock Applet Toggle -->
+        <div class="setting-section">
+          <div class="setting-header-row">
+            <div>
+              <span class="setting-title">Live Clock Applet</span>
+              <p class="setting-desc">Draggable clock card on the new tab page using IP location.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-clock-applet" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 5. Draggable Live Weather Applet Toggle -->
+        <div class="setting-section">
+          <div class="setting-header-row">
+            <div>
+              <span class="setting-title">Live Weather Applet</span>
+              <p class="setting-desc">Draggable live weather card using IP location.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-weather-applet" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 6. Sidebar Width Setting -->
+        <div class="setting-section">
+          <div class="slider-header-row">
+            <span class="setting-title">Sidebar Width</span>
+            <span id="label-sidebar-width" class="setting-value-badge">44px</span>
+          </div>
+          <p class="setting-desc">Adjust the docked App Tower rail width (36px – 72px).</p>
+          <input type="range" id="input-sidebar-width" min="36" max="72" value="44" class="setting-range-slider">
+        </div>
+
+        <!-- 7. Sidebar Color Setting -->
+        <div class="setting-section">
+          <span class="setting-title">Sidebar Color</span>
+          <p class="setting-desc">Choose a theme background color for the sidebar dock.</p>
+          <div class="color-palette-grid">
+            <button type="button" class="color-swatch active" data-color="#12141a" style="background: #12141a;" title="Obsidian (Default)"></button>
+            <button type="button" class="color-swatch" data-color="#0f172a" style="background: #0f172a;" title="Midnight Navy"></button>
+            <button type="button" class="color-swatch" data-color="#18181b" style="background: #18181b;" title="Charcoal"></button>
+            <button type="button" class="color-swatch" data-color="#000000" style="background: #000000;" title="True Black"></button>
+            <button type="button" class="color-swatch" data-color="#1e293b" style="background: #1e293b;" title="Slate Gray"></button>
+            <button type="button" class="color-swatch" data-color="#151226" style="background: #151226;" title="Deep Indigo"></button>
+            <div class="custom-color-picker-wrap" title="Custom Color">
+              <input type="color" id="input-custom-color" value="#12141a">
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="modal-content">
-        <!-- 1. Search Engine Selector -->
-        <div class="setting-group">
-          <label class="setting-title">Default Search Provider</label>
-          <div class="search-provider-grid">
-            <button type="button" class="provider-pill active" data-provider="google">Google</button>
-            <button type="button" class="provider-pill" data-provider="bing">Bing</button>
-            <button type="button" class="provider-pill" data-provider="duckduckgo">DuckDuckGo</button>
-            <button type="button" class="provider-pill" data-provider="kagi">Kagi</button>
-          </div>
-        </div>
-
-        <!-- 2. Wallpaper Picker -->
-        <div class="setting-group">
-          <label class="setting-title">Dashboard Background</label>
-          <div class="wallpaper-options">
-            <button type="button" class="wallpaper-pill active" data-bg="gradient">Dark Studio</button>
-            <button type="button" class="wallpaper-pill" data-bg="bing">Daily Bing</button>
-            <button type="button" class="wallpaper-pill" data-bg="mountain">Mountains</button>
-            <button type="button" class="wallpaper-pill" data-bg="cosmic">Cosmic</button>
-          </div>
-        </div>
-
-        <!-- 3. Live Clock Widget Toggle -->
-        <div class="setting-toggle-row">
-          <div>
-            <span class="setting-label">Live Clock Widget</span>
-            <span class="setting-subtext">Draggable modal with current time</span>
-          </div>
-          <label class="switch">
-            <input id="toggle-clock-widget" type="checkbox" checked />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <!-- 4. Live Weather Widget Toggle -->
-        <div class="setting-toggle-row">
-          <div>
-            <span class="setting-label">Live Weather Widget</span>
-            <span class="setting-subtext">Draggable local weather card</span>
-          </div>
-          <label class="switch">
-            <input id="toggle-weather-widget" type="checkbox" checked />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <!-- 5. Reset Widget Positions -->
-        <div class="setting-action-row">
-          <button id="btn-reset-widgets" type="button" class="btn-secondary">Reset Widget Positions</button>
-        </div>
+      <div class="modal-footer">
+        <button id="modal-btn-reset-pos" class="btn-secondary" title="Reset dragged clock & weather positions">Reset Applet Positions</button>
+        <button id="modal-btn-done" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
 
   <script src="newtab.js"></script>
+  <script src="content.js"></script>
 </body>
 </html>
