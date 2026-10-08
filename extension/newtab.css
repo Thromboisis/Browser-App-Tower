@@ -41,9 +41,15 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(11, 15, 23, 0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgba(11, 15, 23, 0.22);
+  transition: backdrop-filter 0.3s ease, background 0.3s ease;
+}
+
+/* Optional Blur Wallpaper setting (only applied when user enables blur) */
+.bg-overlay.has-wallpaper.is-blurred::after {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(11, 15, 23, 0.45);
 }
 
 /* Top Nav Bar */
@@ -314,21 +320,7 @@ html, body {
   z-index: 5;
 }
 
-/* View Switching based on New Tab Override Setting */
-body.override-disabled .custom-content,
-body.override-disabled .draggable-applet {
-  display: none !important;
-}
-
-body.override-disabled .default-content {
-  display: flex !important;
-}
-
-body.override-enabled .default-content {
-  display: none !important;
-}
-
-body.override-enabled .custom-content {
+.custom-content {
   display: flex !important;
 }
 

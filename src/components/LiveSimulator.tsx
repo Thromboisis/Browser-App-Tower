@@ -76,22 +76,7 @@ interface WindowBounds {
   height: number;
 }
 
-const DEFAULT_APPS: ConfigApp[] = [
-  {
-    id: 'keep',
-    name: 'Google Keep',
-    url: 'https://keep.google.com/',
-    isMobile: false,
-    iconType: 'keep'
-  },
-  {
-    id: 'messages',
-    name: 'Google Messages',
-    url: 'https://messages.google.com/web',
-    isMobile: false,
-    iconType: 'messages'
-  }
-];
+const DEFAULT_APPS: ConfigApp[] = [];
 
 export const LiveSimulator: React.FC = () => {
   const [apps, setApps] = useState<ConfigApp[]>(() => {
@@ -99,12 +84,12 @@ export const LiveSimulator: React.FC = () => {
       const saved = localStorage.getItem('app_tower_apps');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
     return DEFAULT_APPS;
   });
-  const [activeAppId, setActiveAppId] = useState<string | null>('keep');
+  const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -121,17 +106,14 @@ export const LiveSimulator: React.FC = () => {
         if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch (e) {}
-    return {
-      keep: { right: 44, top: 12, width: 460, height: 580 },
-      messages: { right: 44, top: 12, width: 460, height: 580 }
-    };
+    return {};
   });
 
   // Extension Settings State
-  const [newTabOverrideEnabled, setNewTabOverrideEnabled] = useState<boolean>(() => {
+  const [newTabOverrideEnabled, setNewTabOverrideEnabled] = useState<boolean>(true);
+  const [blurBg, setBlurBg] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('app_tower_override_enabled');
-      return saved === 'true'; // disabled by default!
+      return localStorage.getItem('app_tower_blur_bg') === 'true';
     } catch (e) {
       return false;
     }
@@ -1011,147 +993,37 @@ export const LiveSimulator: React.FC = () => {
             className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950"
           >
             {activeWebsite === 'newtab' ? (
-              /* New Tab Page View */
-              !newTabOverrideEnabled ? (
-                /* DEFAULT BROWSER NEW TAB PAGE (When App Tower Override is Disabled) */
-                <div className="relative w-full h-full min-h-[600px] flex flex-col items-center justify-between p-6 select-none bg-[#202124] text-slate-100 overflow-hidden">
-                  {/* Top Controls Bar */}
-                  <div className="w-full flex items-center justify-between z-20">
-                    <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 px-3 py-1.5 rounded-full text-[11px] text-slate-300 font-medium shadow-sm">
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                      <span>Default Browser New Tab (App Tower Override is Off)</span>
-                      <button
-                        onClick={() => {
-                          setNewTabOverrideEnabled(true);
-                          showNotification('New Tab Override Enabled');
-                        }}
-                        className="ml-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-2.5 py-0.5 rounded text-[10.5px] transition cursor-pointer flex items-center gap-1 shadow"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>Enable Custom Dashboard</span>
-                      </button>
-                    </div>
+              /* Active New Tab Experience with Wallpapers & Draggable Applets */
+              <div 
+                className="relative w-full h-full min-h-[600px] flex flex-col items-center justify-center p-6 select-none overflow-hidden"
+                style={{
+                  backgroundImage: bgType === 'gradient' ? undefined : (
+                    bgType === 'bing' ? 'url("https://bing.biturl.top/?resolution=1920&format=image&index=0")' :
+                    bgType === 'mountain' ? 'url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80")' :
+                    bgType === 'cosmic' ? 'url("https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1920&q=80")' :
+                    customBgUrl ? `url("${customBgUrl}")` : undefined
+                  ),
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+              >
+                {/* Backdrop tint filter when wallpaper is active (crisp by default, optional blur) */}
+                {bgType !== 'gradient' && (
+                  <div className={`absolute inset-0 z-0 pointer-events-none transition-all ${blurBg ? 'bg-slate-950/45 backdrop-blur-md' : 'bg-slate-950/20'}`} />
+                )}
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setIsConfigModalOpen(true)}
-                        className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white flex items-center justify-center shadow-lg transition-all hover:rotate-30 cursor-pointer"
-                        title="New Tab & Extension Settings"
-                      >
-                        <Settings className="w-4 h-4 text-blue-400" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Center Default Google Search Experience */}
-                  <div className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl px-4 -mt-12">
-                    {/* Authentic Colorful Google Logo */}
-                    <div className="text-[68px] font-medium tracking-tight select-none mb-7 font-sans leading-none">
-                      <span className="text-[#4285F4]">G</span>
-                      <span className="text-[#EA4335]">o</span>
-                      <span className="text-[#FBBC05]">o</span>
-                      <span className="text-[#4285F4]">g</span>
-                      <span className="text-[#34A853]">l</span>
-                      <span className="text-[#EA4335]">e</span>
-                    </div>
-
-                    {/* Default Google Search Box */}
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const input = (e.currentTarget.elements.namedItem('default_query') as HTMLInputElement)?.value;
-                        if (!input) return;
-                        showNotification(`Searching Google: ${input}`);
-                      }}
-                      className="w-full max-w-xl"
+                {/* Top Controls Bar */}
+                <div className="absolute top-4 left-6 right-6 flex items-center justify-end z-20 pointer-events-none">
+                  <div className="pointer-events-auto flex items-center gap-2">
+                    <button
+                      onClick={() => setIsConfigModalOpen(true)}
+                      className="w-9 h-9 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center shadow-lg transition-all hover:rotate-30 cursor-pointer"
+                      title="Configure New Tab (Search, Wallpapers, Clock, Weather)"
                     >
-                      <div className="flex items-center gap-3 bg-[#303134] hover:bg-[#3c4043] focus-within:bg-[#303134] focus-within:ring-1 focus-within:ring-white/20 border border-transparent rounded-full px-4 py-3 shadow-[0_1px_6px_rgba(0,0,0,0.3)] transition-all">
-                        <Search className="w-4 h-4 text-[#9aa0a6] flex-shrink-0" />
-                        <input
-                          name="default_query"
-                          type="text"
-                          placeholder="Search Google or type a URL"
-                          className="bg-transparent border-none outline-none text-sm text-white placeholder-[#9aa0a6] flex-1 font-sans"
-                          autoComplete="off"
-                        />
-                        <div className="flex items-center gap-3 text-[#9aa0a6]">
-                          <Mic className="w-4 h-4 hover:text-white cursor-pointer transition" />
-                          <Camera className="w-4 h-4 hover:text-white cursor-pointer transition" />
-                        </div>
-                      </div>
-
-                      {/* Google Search & Lucky Buttons */}
-                      <div className="flex items-center justify-center gap-3 mt-6">
-                        <button
-                          type="submit"
-                          className="bg-[#303134] hover:bg-[#3c4043] border border-transparent hover:border-[#5f6368] text-[#e8eaed] text-xs font-medium px-4 py-2 rounded-md transition cursor-pointer"
-                        >
-                          Google Search
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => showNotification("I'm Feeling Lucky clicked")}
-                          className="bg-[#303134] hover:bg-[#3c4043] border border-transparent hover:border-[#5f6368] text-[#e8eaed] text-xs font-medium px-4 py-2 rounded-md transition cursor-pointer"
-                        >
-                          I'm Feeling Lucky
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-
-                  {/* Subtle bottom footer info */}
-                  <div className="w-full flex items-center justify-center text-[11px] text-[#9aa0a6] pb-2">
-                    <span>App Tower Sidebar is pinned on the right • Turn on "New Tab Override" anytime in settings</span>
+                      <Settings className="w-4 h-4 text-blue-400" />
+                    </button>
                   </div>
                 </div>
-              ) : (
-                /* Active New Tab Experience with Wallpapers & Draggable Applets */
-                <div 
-                  className="relative w-full h-full min-h-[600px] flex flex-col items-center justify-center p-6 select-none overflow-hidden"
-                  style={{
-                    backgroundImage: bgType === 'gradient' ? undefined : (
-                      bgType === 'bing' ? 'url("https://bing.biturl.top/?resolution=1920&format=image&index=0")' :
-                      bgType === 'mountain' ? 'url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80")' :
-                      bgType === 'cosmic' ? 'url("https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1920&q=80")' :
-                      customBgUrl ? `url("${customBgUrl}")` : undefined
-                    ),
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center'
-                  }}
-                >
-                  {/* Backdrop tint filter when wallpaper is active */}
-                  {bgType !== 'gradient' && (
-                    <div className="absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] z-0 pointer-events-none" />
-                  )}
-
-                  {/* Top Controls Bar */}
-                  <div className="absolute top-4 left-6 right-6 flex items-center justify-between z-20 pointer-events-none">
-                    <div className="pointer-events-auto">
-                      {!newTabOverrideEnabled && (
-                        <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full text-[11px] text-amber-300 font-medium shadow-md">
-                          <span>Override Disabled in Settings</span>
-                          <button
-                            onClick={() => {
-                              setNewTabOverrideEnabled(true);
-                              showNotification('New Tab Override Enabled');
-                            }}
-                            className="bg-amber-400 hover:bg-amber-300 text-black font-bold px-2 py-0.5 rounded text-[10px] transition cursor-pointer"
-                          >
-                            Enable
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="pointer-events-auto flex items-center gap-2">
-                      <button
-                        onClick={() => setIsConfigModalOpen(true)}
-                        className="w-9 h-9 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white flex items-center justify-center shadow-lg transition-all hover:rotate-30 cursor-pointer"
-                        title="Configure New Tab (Search, Wallpapers, Clock, Weather)"
-                      >
-                        <Settings className="w-4 h-4 text-blue-400" />
-                      </button>
-                    </div>
-                  </div>
 
                   {/* DRAGGABLE LIVE CLOCK APPLET */}
                   {showClockApplet && (
@@ -1276,8 +1148,7 @@ export const LiveSimulator: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              )
-            ) : (
+              ) : (
               /* Document / Portal Content Mock */
               <div className="max-w-3xl mx-auto space-y-6">
                 <div className="border-b border-slate-800/80 pb-4 flex items-center justify-between">
@@ -1558,28 +1429,6 @@ export const LiveSimulator: React.FC = () => {
                   </button>
                 </div>
 
-                {/* New Tab Override Toggle */}
-                <div className="space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-200 text-xs">New Tab Override</span>
-                    <button
-                      onClick={() => {
-                        const next = !newTabOverrideEnabled;
-                        setNewTabOverrideEnabled(next);
-                        showNotification(next ? 'New Tab Override Enabled' : 'New Tab Override Disabled');
-                      }}
-                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                        newTabOverrideEnabled ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
-                      }`}
-                    >
-                      <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Disabled by default. When enabled, opening a new tab loads your custom App Tower dashboard.
-                  </p>
-                </div>
-
                 {/* Sidebar Width Slider */}
                 <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
                   <div className="flex items-center justify-between">
@@ -1694,25 +1543,25 @@ export const LiveSimulator: React.FC = () => {
                 </div>
 
                 <div className="p-4 pt-0 space-y-4 overflow-y-auto">
-                {/* 0. Extension Setting: Enable/Disable New Tab Override */}
+                {/* Blur Wallpaper Toggle */}
                 <div className="space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-semibold text-slate-200 text-xs block">New Tab Override</span>
-                      <span className="text-[10.5px] text-slate-400">Replace default new tab with App Tower custom dashboard</span>
+                      <span className="font-semibold text-slate-200 text-xs block">Blur Wallpaper Image</span>
+                      <span className="text-[10.5px] text-slate-400">Soft frosted glass effect (off for crisp high-def photos)</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        const next = !newTabOverrideEnabled;
-                        setNewTabOverrideEnabled(next);
+                        const next = !blurBg;
+                        setBlurBg(next);
                         try {
-                          localStorage.setItem('app_tower_override_enabled', String(next));
+                          localStorage.setItem('app_tower_blur_bg', String(next));
                         } catch (e) {}
-                        showNotification(next ? 'New Tab Override Enabled' : 'New Tab Override Disabled (Reverted to Default)');
+                        showNotification(next ? 'Wallpaper blur enabled' : 'Wallpaper blur disabled (crisp)');
                       }}
                       className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                        newTabOverrideEnabled ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                        blurBg ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
                       }`}
                     >
                       <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>

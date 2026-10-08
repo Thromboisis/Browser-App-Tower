@@ -13,12 +13,7 @@
 
   <!-- Top Controls Bar -->
   <header class="top-nav">
-    <div class="top-nav-left">
-      <div id="disabled-override-banner" class="override-banner" style="display: none;">
-        <span>New Tab Override is disabled in settings.</span>
-        <button id="banner-btn-enable" class="banner-btn">Enable in Settings</button>
-      </div>
-    </div>
+    <div class="top-nav-left"></div>
     <div class="top-nav-right">
       <button id="btn-config-gear" class="gear-btn" title="New Tab & Extension Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -108,49 +103,6 @@
 
   <!-- Center Main Content -->
   <div class="newtab-wrapper">
-    <!-- 1. DEFAULT BROWSER VIEW (When App Tower Override is Disabled) -->
-    <div id="default-newtab-view" class="newtab-content default-content">
-      <div class="default-google-logo">
-        <span style="color:#4285F4">G</span><span style="color:#EA4335">o</span><span style="color:#FBBC05">o</span><span style="color:#4285F4">g</span><span style="color:#34A853">l</span><span style="color:#EA4335">e</span>
-      </div>
-      <form id="default-search-form" class="default-search-form" action="https://www.google.com/search" method="GET">
-        <div class="default-search-box">
-          <svg viewBox="0 0 24 24" class="default-search-icon" fill="none" stroke="#9aa0a6" stroke-width="2.2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input 
-            type="text" 
-            name="q" 
-            id="default-search-input" 
-            class="default-search-input" 
-            placeholder="Search Google or type a URL" 
-            autocomplete="off" 
-            spellcheck="false"
-          >
-          <div class="default-search-actions">
-            <!-- Google Mic Icon -->
-            <svg viewBox="0 0 24 24" class="search-action-icon" width="18" height="18" fill="none" stroke="#9aa0a6" stroke-width="2">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" y1="19" x2="12" y2="23"></line>
-              <line x1="8" y1="23" x2="16" y2="23"></line>
-            </svg>
-            <!-- Google Lens Camera Icon -->
-            <svg viewBox="0 0 24 24" class="search-action-icon" width="18" height="18" fill="none" stroke="#9aa0a6" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
-          </div>
-        </div>
-        <div class="default-buttons-row">
-          <button type="submit" class="default-search-btn">Google Search</button>
-          <button type="button" class="default-search-btn" id="btn-default-lucky">I'm Feeling Lucky</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- 2. CUSTOM APP TOWER DASHBOARD VIEW (When App Tower Override is Enabled) -->
     <div id="custom-newtab-view" class="newtab-content custom-content">
       <!-- Search Form -->
       <form id="search-form" class="search-form" action="https://www.google.com/search" method="GET">
@@ -208,149 +160,146 @@
       </button>
     </div>
 
-      <div class="modal-scroll-content">
-        <!-- 1. Extension Setting: Enable/Disable New Tab Override -->
-        <div class="setting-section">
-          <div class="setting-header-row">
-            <div>
-              <span class="setting-title">New Tab Override</span>
-              <p class="setting-desc">Enable or disable replacing Chrome's default new tab with App Tower. (Disabled by default)</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-newtab-override">
-              <span class="slider"></span>
-            </label>
-          </div>
+    <div class="modal-scroll-content">
+      <!-- 1. Search Provider -->
+      <div class="setting-section">
+        <span class="setting-title">Search Provider</span>
+        <p class="setting-desc">Choose your preferred search engine or configure a custom search URL.</p>
+        <div class="provider-grid">
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="google">
+            <span class="provider-card">Google</span>
+          </label>
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="duckduckgo">
+            <span class="provider-card">DuckDuckGo</span>
+          </label>
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="bing">
+            <span class="provider-card">Bing</span>
+          </label>
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="ecosia">
+            <span class="provider-card">Ecosia</span>
+          </label>
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="brave">
+            <span class="provider-card">Brave</span>
+          </label>
+          <label class="provider-option">
+            <input type="radio" name="search-provider" value="custom">
+            <span class="provider-card">Custom</span>
+          </label>
         </div>
-
-        <!-- 2. Search Provider -->
-        <div class="setting-section">
-          <span class="setting-title">Search Provider</span>
-          <p class="setting-desc">Choose your preferred search engine or configure a custom search URL.</p>
-          <div class="provider-grid">
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="google">
-              <span class="provider-card">Google</span>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="duckduckgo">
-              <span class="provider-card">DuckDuckGo</span>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="bing">
-              <span class="provider-card">Bing</span>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="ecosia">
-              <span class="provider-card">Ecosia</span>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="brave">
-              <span class="provider-card">Brave</span>
-            </label>
-            <label class="provider-option">
-              <input type="radio" name="search-provider" value="custom">
-              <span class="provider-card">Custom</span>
-            </label>
-          </div>
-          <div id="custom-search-container" class="custom-input-group" style="display: none;">
-            <label for="custom-search-url" class="input-sublabel">Custom Search URL (use <code>{q}</code> for query):</label>
-            <input type="text" id="custom-search-url" class="setting-text-input" placeholder="https://kagi.com/search?q={q}">
-          </div>
-        </div>
-
-        <!-- 3. Background Image & Bing Daily Rotation -->
-        <div class="setting-section">
-          <span class="setting-title">Background Wallpaper</span>
-          <p class="setting-desc">Select a background aesthetic or enable daily photo rotation from Bing.</p>
-          <div class="bg-options-grid">
-            <label class="bg-option">
-              <input type="radio" name="bg-type" value="gradient">
-              <span class="bg-card">Obsidian Glow</span>
-            </label>
-            <label class="bg-option">
-              <input type="radio" name="bg-type" value="bing">
-              <span class="bg-card">Bing Daily Rotation</span>
-            </label>
-            <label class="bg-option">
-              <input type="radio" name="bg-type" value="mountain">
-              <span class="bg-card">Misty Mountains</span>
-            </label>
-            <label class="bg-option">
-              <input type="radio" name="bg-type" value="cosmic">
-              <span class="bg-card">Deep Nebula</span>
-            </label>
-            <label class="bg-option">
-              <input type="radio" name="bg-type" value="custom">
-              <span class="bg-card">Custom URL</span>
-            </label>
-          </div>
-          <div id="custom-bg-container" class="custom-input-group" style="display: none;">
-            <label for="custom-bg-url" class="input-sublabel">Custom Image URL:</label>
-            <input type="url" id="custom-bg-url" class="setting-text-input" placeholder="https://example.com/wallpaper.jpg">
-          </div>
-        </div>
-
-        <!-- 4. Draggable Live Clock Applet Toggle -->
-        <div class="setting-section">
-          <div class="setting-header-row">
-            <div>
-              <span class="setting-title">Live Clock Applet</span>
-              <p class="setting-desc">Draggable clock card on the new tab page using IP location.</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-clock-applet" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- 5. Draggable Live Weather Applet Toggle -->
-        <div class="setting-section">
-          <div class="setting-header-row">
-            <div>
-              <span class="setting-title">Live Weather Applet</span>
-              <p class="setting-desc">Draggable live weather card using IP location.</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-weather-applet" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- 6. Sidebar Width Setting -->
-        <div class="setting-section">
-          <div class="slider-header-row">
-            <span class="setting-title">Sidebar Width</span>
-            <span id="label-sidebar-width" class="setting-value-badge">44px</span>
-          </div>
-          <p class="setting-desc">Adjust the docked App Tower rail width (36px – 72px).</p>
-          <input type="range" id="input-sidebar-width" min="36" max="72" value="44" class="setting-range-slider">
-        </div>
-
-        <!-- 7. Sidebar Color Setting -->
-        <div class="setting-section">
-          <span class="setting-title">Sidebar Color</span>
-          <p class="setting-desc">Choose a theme background color for the sidebar dock.</p>
-          <div class="color-palette-grid">
-            <button type="button" class="color-swatch active" data-color="#12141a" style="background: #12141a;" title="Obsidian (Default)"></button>
-            <button type="button" class="color-swatch" data-color="#0f172a" style="background: #0f172a;" title="Midnight Navy"></button>
-            <button type="button" class="color-swatch" data-color="#18181b" style="background: #18181b;" title="Charcoal"></button>
-            <button type="button" class="color-swatch" data-color="#000000" style="background: #000000;" title="True Black"></button>
-            <button type="button" class="color-swatch" data-color="#1e293b" style="background: #1e293b;" title="Slate Gray"></button>
-            <button type="button" class="color-swatch" data-color="#151226" style="background: #151226;" title="Deep Indigo"></button>
-            <div class="custom-color-picker-wrap" title="Custom Color">
-              <input type="color" id="input-custom-color" value="#12141a">
-            </div>
-          </div>
+        <div id="custom-search-container" class="custom-input-group" style="display: none;">
+          <label for="custom-search-url" class="input-sublabel">Custom Search URL (use <code>{q}</code> for query):</label>
+          <input type="text" id="custom-search-url" class="setting-text-input" placeholder="https://kagi.com/search?q={q}">
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button id="modal-btn-reset-pos" class="btn-secondary" title="Reset dragged clock & weather positions">Reset Applet Positions</button>
-        <button id="modal-btn-done" class="btn-primary">Done</button>
+      <!-- 2. Background Image & Wallpaper -->
+      <div class="setting-section">
+        <span class="setting-title">Background Wallpaper</span>
+        <p class="setting-desc">Select a background aesthetic or enable daily photo rotation from Bing.</p>
+        <div class="bg-options-grid">
+          <label class="bg-option">
+            <input type="radio" name="bg-type" value="gradient">
+            <span class="bg-card">Obsidian Glow</span>
+          </label>
+          <label class="bg-option">
+            <input type="radio" name="bg-type" value="bing">
+            <span class="bg-card">Bing Daily Rotation</span>
+          </label>
+          <label class="bg-option">
+            <input type="radio" name="bg-type" value="mountain">
+            <span class="bg-card">Misty Mountains</span>
+          </label>
+          <label class="bg-option">
+            <input type="radio" name="bg-type" value="cosmic">
+            <span class="bg-card">Deep Nebula</span>
+          </label>
+          <label class="bg-option">
+            <input type="radio" name="bg-type" value="custom">
+            <span class="bg-card">Custom URL</span>
+          </label>
+        </div>
+        <div id="custom-bg-container" class="custom-input-group" style="display: none;">
+          <label for="custom-bg-url" class="input-sublabel">Custom Image URL:</label>
+          <input type="url" id="custom-bg-url" class="setting-text-input" placeholder="https://example.com/wallpaper.jpg">
+        </div>
+
+        <!-- Optional Blur Background Setting -->
+        <div class="setting-header-row" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+          <div>
+            <span class="setting-title" style="font-size: 11.5px;">Blur Wallpaper Image</span>
+            <p class="setting-desc" style="font-size: 10.5px;">Apply soft frosted blur to wallpaper images (off for crisp photos by default).</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-blur-wallpaper">
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
+
+      <!-- 3. Draggable Live Clock Applet Toggle -->
+      <div class="setting-section">
+        <div class="setting-header-row">
+          <div>
+            <span class="setting-title">Live Clock Applet</span>
+            <p class="setting-desc">Draggable clock card on the new tab page using IP location.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-clock-applet" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 4. Draggable Live Weather Applet Toggle -->
+      <div class="setting-section">
+        <div class="setting-header-row">
+          <div>
+            <span class="setting-title">Live Weather Applet</span>
+            <p class="setting-desc">Draggable live weather card using IP location.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-weather-applet" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 5. Sidebar Width Setting -->
+      <div class="setting-section">
+        <div class="slider-header-row">
+          <span class="setting-title">Sidebar Width</span>
+          <span id="label-sidebar-width" class="setting-value-badge">44px</span>
+        </div>
+        <p class="setting-desc">Adjust the docked App Tower rail width (36px – 72px).</p>
+        <input type="range" id="input-sidebar-width" min="36" max="72" value="44" class="setting-range-slider">
+      </div>
+
+      <!-- 6. Sidebar Color Setting -->
+      <div class="setting-section">
+        <span class="setting-title">Sidebar Color</span>
+        <p class="setting-desc">Choose a theme background color for the sidebar dock.</p>
+        <div class="color-palette-grid">
+          <button type="button" class="color-swatch active" data-color="#12141a" style="background: #12141a;" title="Obsidian (Default)"></button>
+          <button type="button" class="color-swatch" data-color="#0f172a" style="background: #0f172a;" title="Midnight Navy"></button>
+          <button type="button" class="color-swatch" data-color="#18181b" style="background: #18181b;" title="Charcoal"></button>
+          <button type="button" class="color-swatch" data-color="#000000" style="background: #000000;" title="True Black"></button>
+          <button type="button" class="color-swatch" data-color="#1e293b" style="background: #1e293b;" title="Slate Gray"></button>
+          <button type="button" class="color-swatch" data-color="#151226" style="background: #151226;" title="Deep Indigo"></button>
+          <div class="custom-color-picker-wrap" title="Custom Color">
+            <input type="color" id="input-custom-color" value="#12141a">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button id="modal-btn-reset-pos" class="btn-secondary" title="Reset dragged clock & weather positions">Reset Applet Positions</button>
+      <button id="modal-btn-done" class="btn-primary">Done</button>
     </div>
   </div>
 

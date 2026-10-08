@@ -852,11 +852,8 @@
     `;
     shadow.appendChild(styleTag);
 
-    // 4. Default Applications
-    let currentApps = [
-      { id: 'keep', name: 'Google Keep', url: 'https://keep.google.com/', isMobile: false },
-      { id: 'messages', name: 'Google Messages', url: 'https://messages.google.com/web', isMobile: false }
-    ];
+    // 4. Default Applications (Clean slate: starts with zero apps)
+    let currentApps = [];
 
     let activeAppWindows = {};
 
@@ -1058,19 +1055,6 @@
 
       <div class="settings-section-block">
         <div class="settings-row">
-          <div>
-            <span class="settings-label">New Tab Override</span>
-            <p class="settings-subtext">Replace standard new tab with App Tower. (Disabled by default)</p>
-          </div>
-          <label class="settings-toggle-switch">
-            <input type="checkbox" id="settings-toggle-override">
-            <span class="settings-slider-round"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="settings-section-block">
-        <div class="settings-row">
           <span class="settings-label">Sidebar Width</span>
           <span class="view-mode-badge" id="settings-badge-width">44px</span>
         </div>
@@ -1100,7 +1084,6 @@
     // Settings Modal Elements
     const settingsBtnClose = settingsCard.querySelector('#settings-btn-close');
     const settingsBtnDone = settingsCard.querySelector('#settings-btn-done');
-    const settingsToggleOverride = settingsCard.querySelector('#settings-toggle-override');
     const settingsInputWidth = settingsCard.querySelector('#settings-input-width');
     const settingsBadgeWidth = settingsCard.querySelector('#settings-badge-width');
     const settingsSwatches = settingsCard.querySelectorAll('.settings-swatch');
@@ -1110,7 +1093,6 @@
     function openSettingsModal() {
       closeContextMenu();
       closeAppModal();
-      settingsToggleOverride.checked = !!newTabOverrideEnabled;
       settingsInputWidth.value = String(currentDockWidth);
       settingsBadgeWidth.textContent = `${currentDockWidth}px`;
 
@@ -1146,12 +1128,6 @@
 
     settingsBtnClose.addEventListener('click', closeSettingsModal);
     settingsBtnDone.addEventListener('click', closeSettingsModal);
-
-    settingsToggleOverride.addEventListener('change', () => {
-      newTabOverrideEnabled = settingsToggleOverride.checked;
-      chrome.storage.local.set({ new_tab_override_enabled: newTabOverrideEnabled });
-      showToast(newTabOverrideEnabled ? 'New Tab Enabled' : 'New Tab Disabled');
-    });
 
     settingsInputWidth.addEventListener('input', () => {
       const val = parseInt(settingsInputWidth.value, 10);
@@ -1764,7 +1740,7 @@
       }
       updateDockStyles();
 
-      if (data.dock_apps && Array.isArray(data.dock_apps) && data.dock_apps.length > 0) {
+      if (data.dock_apps && Array.isArray(data.dock_apps)) {
         currentApps = data.dock_apps;
       }
       renderAppButtons();

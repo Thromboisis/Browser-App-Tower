@@ -2,10 +2,10 @@
  * App Tower - New Tab Page Script
  * Manages:
  * 1. Search provider selection (Google, DuckDuckGo, Bing, Ecosia, Brave, Custom)
- * 2. Background wallpapers including daily rotation from Bing
+ * 2. Background wallpapers (Obsidian Glow, Bing Daily Rotation, Mountains, Cosmic, Custom URL) with optional frosted glass blur
  * 3. Draggable Live Clock Applet (IP/location-based time & timezone)
  * 4. Draggable Live Weather Applet (IP/location-based live weather via Open-Meteo)
- * 5. Extension settings (New Tab Override toggle disabled by default, Sidebar width, Sidebar color)
+ * 5. Extension settings (Sidebar width, Sidebar color, Applet positions)
  */
 
 (function () {
@@ -13,8 +13,6 @@
 
   // DOM Elements
   const bgOverlay = document.getElementById('bg-overlay');
-  const banner = document.getElementById('disabled-override-banner');
-  const bannerBtnEnable = document.getElementById('banner-btn-enable');
   const gearBtn = document.getElementById('btn-config-gear');
   const modalCard = document.getElementById('config-modal-card');
   const modalDragHeader = document.getElementById('config-modal-drag-header');
@@ -40,12 +38,9 @@
   // Search
   const searchForm = document.getElementById('search-form');
   const searchInput = document.getElementById('search-input');
-  const defaultSearchForm = document.getElementById('default-search-form');
-  const defaultSearchInput = document.getElementById('default-search-input');
-  const btnDefaultLucky = document.getElementById('btn-default-lucky');
 
   // Settings Controls
-  const toggleOverride = document.getElementById('toggle-newtab-override');
+  const toggleBlurWallpaper = document.getElementById('toggle-blur-wallpaper');
   const toggleClock = document.getElementById('toggle-clock-applet');
   const toggleWeather = document.getElementById('toggle-weather-applet');
   const providerRadios = document.querySelectorAll('input[name="search-provider"]');
@@ -61,11 +56,11 @@
 
   // State
   let settings = {
-    new_tab_override_enabled: false, // Disabled by default!
     search_provider: 'google',
     custom_search_url: '',
     bg_type: 'gradient',
     custom_bg_url: '',
+    blur_bg: false, // Crisp high-definition wallpaper by default!
     show_clock: true,
     show_weather: true,
     clock_pos: { x: 60, y: 80 },
@@ -93,11 +88,11 @@
   // 1. Load Settings from chrome.storage.local
   function loadSettings() {
     chrome.storage.local.get([
-      'new_tab_override_enabled',
       'search_provider',
       'custom_search_url',
       'bg_type',
       'custom_bg_url',
+      'blur_bg',
       'show_clock',
       'show_weather',
       'clock_pos',
@@ -105,13 +100,11 @@
       'dock_width',
       'dock_color'
     ], (data) => {
-      if (typeof data.new_tab_override_enabled === 'boolean') {
-        settings.new_tab_override_enabled = data.new_tab_override_enabled;
-      }
       if (data.search_provider) settings.search_provider = data.search_provider;
       if (data.custom_search_url) settings.custom_search_url = data.custom_search_url;
       if (data.bg_type) settings.bg_type = data.bg_type;
       if (data.custom_bg_url) settings.custom_bg_url = data.custom_bg_url;
+      if (typeof data.blur_bg === 'boolean') settings.blur_bg = data.blur_bg;
       if (typeof data.show_clock === 'boolean') settings.show_clock = data.show_clock;
       if (typeof data.show_weather === 'boolean') settings.show_weather = data.show_weather;
       if (data.clock_pos && typeof data.clock_pos.x === 'number') settings.clock_pos = data.clock_pos;
@@ -125,37 +118,23 @@
 
   // 2. Apply Settings to UI
   function applySettingsToUI() {
-    // Switch between Override Disabled (Default Google Search page) and Override Enabled (App Tower custom dashboard)
-    if (!settings.new_tab_override_enabled) {
-      document.body.classList.remove('override-enabled');
-      document.body.classList.add('override-disabled');
-      banner.style.display = 'flex';
-      if (bgOverlay) {
-        bgOverlay.style.backgroundImage = '';
-        bgOverlay.classList.remove('has-wallpaper');
-      }
-    } else {
-      document.body.classList.remove('override-disabled');
-      document.body.classList.add('override-enabled');
-      banner.style.display = 'none';
-      applyWallpaper(settings.bg_type, settings.custom_bg_url);
-    }
+    applyWallpaper(settings.bg_type, settings.custom_bg_url);
 
     // Toggle states
-    if (toggleOverride) toggleOverride.checked = !!settings.new_tab_override_enabled;
+    if (toggleBlurWallpaper) toggleBlurWallpaper.checked = !!settings.blur_bg;
     if (toggleClock) toggleClock.checked = !!settings.show_clock;
     if (toggleWeather) toggleWeather.checked = !!settings.show_weather;
 
     // Clock visibility & position
     if (clockApplet) {
-      clockApplet.style.display = (settings.new_tab_override_enabled && settings.show_clock) ? 'block' : 'none';
+      clockApplet.style.display = settings.show_clock ? 'block' : 'none';
       clockApplet.style.left = `${settings.clock_pos.x}px`;
       clockApplet.style.top = `${settings.clock_pos.y}px`;
     }
 
     // Weather visibility & position
     if (weatherApplet) {
-      weatherApplet.style.display = (settings.new_tab_override_enabled && settings.show_weather) ? 'block' : 'none';
+      weatherApplet.style.display = settings.show_weather ? 'block' : 'none';
       weatherApplet.style.left = `${settings.weather_pos.x}px`;
       weatherApplet.style.top = `${settings.weather_pos.y}px`;
     }
@@ -171,12 +150,7 @@
       customSearchUrlInput.value = settings.custom_search_url || '';
     }
 
-    const providerObj = SEARCH_PROVIDERS[settings.search_provider] || SEARCH_PROVIDERS.google;
-    if (searchInput) {
-      searchInput.placeholder = `Search with ${providerObj.name} or type a URL...`;
-    }
-
-    // Background Wallpaper
+    // Background type radios
     bgRadios.forEach(r => {
       r.checked = r.value === settings.bg_type;
     });
@@ -187,9 +161,18 @@
       customBgUrlInput.value = settings.custom_bg_url || '';
     }
 
-    // Sidebar Width & Color
-    if (inputSidebarWidth && labelSidebarWidth) {
+    // Update search placeholder
+    if (searchInput) {
+      const currentProv = SEARCH_PROVIDERS[settings.search_provider];
+      const provName = currentProv ? currentProv.name : 'Web';
+      searchInput.placeholder = `Search with ${provName} or enter a URL...`;
+    }
+
+    // Sidebar settings
+    if (inputSidebarWidth) {
       inputSidebarWidth.value = String(settings.dock_width);
+    }
+    if (labelSidebarWidth) {
       labelSidebarWidth.textContent = `${settings.dock_width}px`;
     }
 
@@ -209,9 +192,16 @@
   function applyWallpaper(bgType, customUrl) {
     if (!bgOverlay) return;
 
+    if (settings.blur_bg) {
+      bgOverlay.classList.add('is-blurred');
+    } else {
+      bgOverlay.classList.remove('is-blurred');
+    }
+
     if (bgType === 'gradient') {
       bgOverlay.style.backgroundImage = '';
       bgOverlay.classList.remove('has-wallpaper');
+      bgOverlay.classList.remove('is-blurred');
     } else if (bgType === 'custom' && customUrl) {
       bgOverlay.style.backgroundImage = `url("${customUrl}")`;
       bgOverlay.classList.add('has-wallpaper');
@@ -221,6 +211,7 @@
     } else {
       bgOverlay.style.backgroundImage = '';
       bgOverlay.classList.remove('has-wallpaper');
+      bgOverlay.classList.remove('is-blurred');
     }
   }
 
@@ -250,111 +241,112 @@
   updateClock();
   setInterval(updateClock, 1000);
 
-  // 5. Geolocation / IP Lookup for Clock & Weather
-  async function fetchLocationAndWeather() {
-    let lat = 37.7749;
-    let lon = -122.4194;
-    let locationName = 'Local';
-
+  // 5. Live Weather with Open-Meteo & Geo-IP
+  async function fetchLiveWeather() {
     try {
-      // First attempt IP-based location lookup
-      const res = await fetch('https://ipapi.co/json/');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.latitude && data.longitude) {
-          lat = data.latitude;
-          lon = data.longitude;
-          locationName = `${data.city || 'Local'}${data.region_code ? ', ' + data.region_code : ''}`;
-        }
-      }
-    } catch (e) {
-      // Fallback to browser timezone
+      let lat = 40.7128;
+      let lon = -74.0060;
+      let city = 'New York';
+
+      // 1. Try free fast IP geolocation
       try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-        const parts = tz.split('/');
-        locationName = parts[parts.length - 1].replace(/_/g, ' ') || 'Local';
-      } catch (err) {}
-    }
-
-    resolvedCity = locationName;
-    if (clockLocText) {
-      clockLocText.textContent = locationName;
-    }
-    if (weatherCityBadge) {
-      weatherCityBadge.textContent = locationName;
-    }
-
-    // Now fetch live weather from Open-Meteo
-    try {
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relativehumidity_2m&temperature_unit=fahrenheit&windspeed_unit=mph`;
-      const wRes = await fetch(weatherUrl);
-      if (wRes.ok) {
-        const wData = await wRes.json();
-        const cur = wData.current_weather;
-        if (cur) {
-          const temp = Math.round(cur.temperature);
-          if (weatherTempVal) weatherTempVal.textContent = `${temp}°F`;
-          if (weatherWindText) weatherWindText.textContent = `Wind: ${Math.round(cur.windspeed)} mph`;
-
-          // Estimate humidity
-          let humidity = 55;
-          if (wData.hourly && wData.hourly.relativehumidity_2m && wData.hourly.relativehumidity_2m.length > 0) {
-            humidity = wData.hourly.relativehumidity_2m[0];
+        const ipRes = await fetch('https://ipapi.co/json/');
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
+            lat = ipData.latitude;
+            lon = ipData.longitude;
+            city = ipData.city || ipData.region || 'Local';
           }
-          if (weatherHumidityText) weatherHumidityText.textContent = `Humidity: ${humidity}%`;
+        }
+      } catch (e) {
+        // Fallback default coordinates
+      }
 
-          // Interpret WMO weather code
-          const cond = interpretWeatherCode(cur.weathercode);
-          if (weatherConditionText) weatherConditionText.textContent = cond.label;
-          if (weatherIconContainer) weatherIconContainer.innerHTML = cond.svg;
+      resolvedCity = city;
+      if (clockLocText) {
+        clockLocText.textContent = city;
+      }
+      if (weatherCityBadge) {
+        weatherCityBadge.textContent = city;
+      }
+
+      // 2. Fetch live weather from open-meteo (zero API key needed)
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relativehumidity_2m&temperature_unit=fahrenheit&windspeed_unit=mph`;
+      const res = await fetch(weatherUrl);
+      if (!res.ok) throw new Error('Weather fetch failed');
+      const data = await res.json();
+
+      if (data && data.current_weather) {
+        const current = data.current_weather;
+        const temp = Math.round(current.temperature);
+        const code = current.weathercode;
+        const wind = Math.round(current.windspeed);
+
+        if (weatherTempVal) weatherTempVal.textContent = `${temp}°F`;
+        if (weatherWindText) weatherWindText.textContent = `Wind: ${wind} mph`;
+
+        // Weather code to text & icon
+        const weatherInfo = mapWeatherCode(code);
+        if (weatherConditionText) weatherConditionText.textContent = weatherInfo.condition;
+        if (weatherIconContainer) weatherIconContainer.innerHTML = weatherInfo.svg;
+
+        // Relative humidity estimate
+        if (data.hourly && data.hourly.relativehumidity_2m && weatherHumidityText) {
+          const humidity = data.hourly.relativehumidity_2m[0] || 55;
+          weatherHumidityText.textContent = `Humidity: ${humidity}%`;
         }
       }
-    } catch (wErr) {
-      if (weatherConditionText) weatherConditionText.textContent = 'Clear Skies';
-      if (weatherTempVal) weatherTempVal.textContent = '68°F';
+    } catch (err) {
+      if (clockLocText) clockLocText.textContent = 'Current Time';
+      if (weatherCityBadge) weatherCityBadge.textContent = 'Weather';
+      if (weatherTempVal) weatherTempVal.textContent = '72°F';
+      if (weatherConditionText) weatherConditionText.textContent = 'Fair';
     }
   }
 
-  function interpretWeatherCode(code) {
+  function mapWeatherCode(code) {
     if (code === 0) {
       return {
-        label: 'Clear Sky',
-        svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+        condition: 'Clear Sky',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
       };
-    }
-    if (code >= 1 && code <= 3) {
+    } else if (code >= 1 && code <= 3) {
       return {
-        label: code === 1 ? 'Mainly Clear' : (code === 2 ? 'Partly Cloudy' : 'Overcast'),
-        svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>`
+        condition: 'Partly Cloudy',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`
       };
-    }
-    if (code >= 51 && code <= 67 || code >= 80 && code <= 82) {
+    } else if (code >= 45 && code <= 48) {
       return {
-        label: 'Rain Showers',
-        svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path><line x1="8" y1="19" x2="8" y2="21"></line><line x1="8" y1="13" x2="8" y2="15"></line><line x1="16" y1="19" x2="16" y2="21"></line><line x1="16" y1="13" x2="16" y2="15"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="12" y1="15" x2="12" y2="17"></line></svg>`
+        condition: 'Foggy',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#94a3b8" stroke-width="2"><line x1="3" y1="10" x2="21" y2="10"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`
       };
-    }
-    if (code >= 71 && code <= 77 || code >= 85 && code <= 86) {
+    } else if (code >= 51 && code <= 67) {
       return {
-        label: 'Snow',
-        svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#e0f2fe" stroke-width="2"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"></path><line x1="8" y1="16" x2="8.01" y2="16"></line><line x1="8" y1="20" x2="8.01" y2="20"></line><line x1="12" y1="18" x2="12.01" y2="18"></line><line x1="12" y1="22" x2="12.01" y2="22"></line><line x1="16" y1="16" x2="16.01" y2="16"></line><line x1="16" y1="20" x2="16.01" y2="20"></line></svg>`
+        condition: 'Rain Showers',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#60a5fa" stroke-width="2"><line x1="16" y1="13" x2="16" y2="21"/><line x1="8" y1="13" x2="8" y2="21"/><line x1="12" y1="15" x2="12" y2="23"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></svg>`
       };
-    }
-    if (code >= 95) {
+    } else if (code >= 71 && code <= 77) {
       return {
-        label: 'Thunderstorm',
-        svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#facc15" stroke-width="2"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"></path><polyline points="13 11 9 17 15 17 11 23"></polyline></svg>`
+        condition: 'Snow',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#e2e8f0" stroke-width="2"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="8" y1="20" x2="8.01" y2="20"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="12" y1="22" x2="12.01" y2="22"/><line x1="16" y1="16" x2="16.01" y2="16"/><line x1="16" y1="20" x2="16.01" y2="20"/></svg>`
+      };
+    } else if (code >= 80 && code <= 99) {
+      return {
+        condition: 'Thunderstorm',
+        svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polygon points="13 11 9 17 15 17 11 23"/></svg>`
       };
     }
     return {
-      label: 'Partly Cloudy',
-      svg: `<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>`
+      condition: 'Overcast',
+      svg: `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#93c5fd" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>`
     };
   }
 
-  fetchLocationAndWeather();
+  fetchLiveWeather();
+  setInterval(fetchLiveWeather, 15 * 60 * 1000);
 
-  // 6. Generic Applet Drag & Drop Handler
+  // 6. Draggable Applets Behavior
   function makeAppletDraggable(appletEl, storageKey) {
     if (!appletEl) return;
     const header = appletEl.querySelector('.applet-drag-header');
@@ -367,10 +359,8 @@
     let initialTop = 0;
 
     header.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return; // Left click only
       isDragging = true;
       appletEl.classList.add('is-dragging');
-
       startX = e.clientX;
       startY = e.clientY;
 
@@ -391,12 +381,11 @@
       let newLeft = initialLeft + dx;
       let newTop = initialTop + dy;
 
-      // Viewport bounds clamp
-      const maxLeft = Math.max(10, window.innerWidth - appletEl.offsetWidth - 56);
+      const maxLeft = Math.max(10, window.innerWidth - appletEl.offsetWidth - 20);
       const maxTop = Math.max(10, window.innerHeight - appletEl.offsetHeight - 20);
 
       newLeft = Math.max(10, Math.min(maxLeft, newLeft));
-      newTop = Math.max(56, Math.min(maxTop, newTop));
+      newTop = Math.max(10, Math.min(maxTop, newTop));
 
       appletEl.style.left = `${newLeft}px`;
       appletEl.style.top = `${newTop}px`;
@@ -454,42 +443,7 @@
     });
 
     window.addEventListener('focus', () => {
-      if (settings.new_tab_override_enabled) {
-        searchInput.focus();
-      } else if (defaultSearchInput) {
-        defaultSearchInput.focus();
-      }
-    });
-  }
-
-  // Default Google Search Form
-  if (defaultSearchForm && defaultSearchInput) {
-    defaultSearchForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const raw = defaultSearchInput.value.trim();
-      if (!raw) return;
-
-      const isHttp = /^https?:\/\//i.test(raw);
-      const isDomain = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}(:\d+)?(\/.*)?$/i.test(raw);
-
-      if (isHttp) {
-        window.location.href = raw;
-      } else if (isDomain) {
-        window.location.href = `https://${raw}`;
-      } else {
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
-      }
-    });
-  }
-
-  if (btnDefaultLucky) {
-    btnDefaultLucky.addEventListener('click', () => {
-      const raw = (defaultSearchInput && defaultSearchInput.value.trim()) || '';
-      if (raw) {
-        window.location.href = `https://www.google.com/search?btnI=1&q=${encodeURIComponent(raw)}`;
-      } else {
-        window.location.href = 'https://www.google.com/doodles';
-      }
+      searchInput.focus();
     });
   }
 
@@ -616,19 +570,11 @@
     }
   });
 
-  if (bannerBtnEnable) {
-    bannerBtnEnable.addEventListener('click', () => {
-      settings.new_tab_override_enabled = true;
-      chrome.storage.local.set({ new_tab_override_enabled: true });
-      applySettingsToUI();
-    });
-  }
-
-  // Override Toggle
-  if (toggleOverride) {
-    toggleOverride.addEventListener('change', () => {
-      settings.new_tab_override_enabled = toggleOverride.checked;
-      chrome.storage.local.set({ new_tab_override_enabled: settings.new_tab_override_enabled });
+  // Blur Wallpaper Toggle
+  if (toggleBlurWallpaper) {
+    toggleBlurWallpaper.addEventListener('change', () => {
+      settings.blur_bg = toggleBlurWallpaper.checked;
+      chrome.storage.local.set({ blur_bg: settings.blur_bg });
       applySettingsToUI();
     });
   }

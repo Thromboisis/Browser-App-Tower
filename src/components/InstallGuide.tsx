@@ -324,14 +324,17 @@ export const InstallGuide: React.FC = () => {
           <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
             <div className="flex items-center gap-2 font-semibold text-blue-400">
               <Layout className="w-4 h-4 flex-shrink-0" />
-              <span>How does the New Tab Override & Settings work?</span>
+              <span>How does the New Tab Dashboard & Settings work?</span>
             </div>
             <p className="text-slate-300 leading-relaxed">
-              App Tower includes full extension customization and a dedicated New Tab dashboard:
+              App Tower includes a clean slate dock and an integrated New Tab dashboard:
             </p>
             <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1">
               <li>
-                <strong className="text-slate-200">New Tab Override (Disabled by default):</strong> You can turn this setting on in the gear settings menu to replace your blank tab with customizable search engines, Bing wallpapers, and draggable live clock & weather modals.
+                <strong className="text-slate-200">Clean Slate by Default:</strong> Begins with zero pre-pinned apps so you start with an uncluttered sidebar and add only the web apps you need.
+              </li>
+              <li>
+                <strong className="text-slate-200">Crisp Wallpapers & Custom Search:</strong> Full resolution high-definition wallpapers (with an optional blur toggle in settings) and your choice of search engines (Google, DuckDuckGo, Bing, Ecosia, Brave, or Custom).
               </li>
               <li>
                 <strong className="text-slate-200">Custom Sidebar Width & Color:</strong> Adjust the rail width (36px to 72px) and choose between Obsidian, Navy, Charcoal, Black, or custom hex colors.
