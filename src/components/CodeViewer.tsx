@@ -8,7 +8,7 @@ export const CodeViewer: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
-  const activeFile = EXTENSION_FILES.find(f => f.key === activeFileKey) || EXTENSION_FILES[0];
+  const activeFile = EXTENSION_FILES[activeFileKey] || Object.values(EXTENSION_FILES)[0];
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
