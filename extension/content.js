@@ -26,8 +26,45 @@
       return;
     }
     if (response && response.isCompanion) {
-      // Companion window detected: skip sidebar insertion!
-      console.log('[App Tower] Companion app window detected - sidebar rail is excluded.');
+      // Companion window detected: skip sidebar insertion and track position
+      console.log('[App Tower] Companion app window detected - tracking position and excluding dock.');
+
+      const targetAppId = response.appId;
+      let lastReported = { x: null, y: null, w: null, h: null };
+
+      function reportBounds() {
+        if (!targetAppId) return;
+        const x = Math.round(window.screenX);
+        const y = Math.round(window.screenY);
+        const w = Math.round(window.outerWidth);
+        const h = Math.round(window.outerHeight);
+
+        // Ignore minimized or invalid dimensions
+        if (w < 200 || h < 200) return;
+
+        if (x !== lastReported.x || y !== lastReported.y || w !== lastReported.w || h !== lastReported.h) {
+          lastReported = { x, y, w, h };
+          try {
+            chrome.runtime.sendMessage({
+              action: 'companion_window_moved',
+              appId: targetAppId,
+              bounds: { left: x, top: y, width: w, height: h }
+            });
+          } catch (e) {}
+        }
+      }
+
+      window.addEventListener('resize', reportBounds);
+      window.addEventListener('blur', reportBounds);
+      window.addEventListener('beforeunload', reportBounds);
+      window.addEventListener('mouseup', reportBounds);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') reportBounds();
+      });
+
+      // Periodic check and initial sync
+      setInterval(reportBounds, 1500);
+      setTimeout(reportBounds, 1000);
       return;
     }
     initAppTowerDock();

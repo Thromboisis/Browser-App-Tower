@@ -15,6 +15,8 @@ const DEFAULT_APPS = [];
 
 // Set of in-memory active companion window IDs (so content script knows not to inject sidebar)
 const companionWindowIds = new Set();
+// Map tracking timestamp of window creation to prevent transient creation bounds from overwriting saved positions
+const windowCreationTimes = new Map();
 
 // Initialize default storage on install
 chrome.runtime.onInstalled.addListener(async () => {
@@ -59,6 +61,19 @@ async function isCompanionWindow(winId) {
     }
   }
   return false;
+}
+
+// Get the app ID that owns a companion window ID
+async function getCompanionAppId(winId) {
+  if (!winId) return null;
+  const tracker = await getStoredTracker();
+  for (const [appId, savedWinId] of Object.entries(tracker)) {
+    if (savedWinId === winId) {
+      companionWindowIds.add(winId);
+      return appId;
+    }
+  }
+  return null;
 }
 
 // Helper to get saved bounds for an app
@@ -411,9 +426,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // Check if current sender tab belongs to an App Tower companion window
   if (message.action === 'check_is_companion_window') {
     const senderWinId = sender && sender.tab ? sender.tab.windowId : null;
-    isCompanionWindow(senderWinId).then((isCompanion) => {
-      sendResponse({ isCompanion: isCompanion });
+    getCompanionAppId(senderWinId).then((appId) => {
+      sendResponse({ isCompanion: Boolean(appId), appId: appId });
     });
+    return true;
+  }
+
+  // Receive direct screen coordinates reported from companion window tab DOM
+  if (message.action === 'companion_window_moved') {
+    if (message.appId && message.bounds) {
+      saveAppBounds(message.appId, message.bounds);
+    }
+    sendResponse({ success: true });
     return true;
   }
 
@@ -652,23 +676,33 @@ async function handleToggleWindow(appId, appUrlOverride, isMobileOverride, clien
     });
 
     companionWindowIds.add(newWin.id);
+    windowCreationTimes.set(newWin.id, Date.now());
 
     const tracker = await getStoredTracker();
     tracker[appId] = newWin.id;
     await saveStoredTracker(tracker);
 
-    // CRITICAL: Chromium frequently ignores left & top when creating popups.
-    // Call chrome.windows.update immediately to force the exact saved coordinates & size!
-    try {
-      await chrome.windows.update(newWin.id, {
-        left: Math.round(targetLeft),
-        top: Math.round(targetTop),
-        width: Math.round(targetWidth),
-        height: Math.round(targetHeight)
-      });
-    } catch (e) {
-      console.warn('Initial window update position warning:', e);
-    }
+    // CRITICAL MULTI-STAGE REPOSITIONING WORKAROUND:
+    // Chromium's window manager frequently ignores left & top upon popup creation,
+    // placing it at OS cascading coordinates. We apply multiple staged reposition passes:
+    // Pass 1: immediate
+    // Pass 2: 120ms (after OS window handle is fully registered & mapped)
+    // Pass 3: 350ms (after initial paint / page frame initialization)
+    const applyTargetBounds = async () => {
+      try {
+        await chrome.windows.update(newWin.id, {
+          left: Math.round(targetLeft),
+          top: Math.round(targetTop),
+          width: Math.round(targetWidth),
+          height: Math.round(targetHeight),
+          state: 'normal'
+        });
+      } catch (e) {}
+    };
+
+    await applyTargetBounds();
+    setTimeout(applyTargetBounds, 120);
+    setTimeout(applyTargetBounds, 350);
 
     // Only save initial bounds if this app did NOT already have saved bounds.
     // Never overwrite an already saved position with transient window creation coordinates!
@@ -703,6 +737,12 @@ async function handleToggleWindow(appId, appUrlOverride, isMobileOverride, clien
 chrome.windows.onBoundsChanged.addListener(async (win) => {
   if (!win || !win.id) return;
   if (win.state && win.state !== 'normal') return;
+
+  // Prevent transient creation events from overwriting the user's saved position
+  const createTime = windowCreationTimes.get(win.id) || 0;
+  if (Date.now() - createTime < 1000) {
+    return;
+  }
 
   try {
     // In Chromium, win object passed to onBoundsChanged may have incomplete properties.
@@ -754,6 +794,30 @@ chrome.windows.onBoundsChanged.addListener(async (win) => {
   } catch (err) {
     // Window may have closed during async lookup
   }
+});
+
+// Window focus changed listener: ensures final settled position is captured when user finishes dragging
+chrome.windows.onFocusChanged.addListener(async (focusedWinId) => {
+  if (!focusedWinId || focusedWinId === chrome.windows.WINDOW_ID_NONE) return;
+  try {
+    const tracker = await getStoredTracker();
+    for (const [appId, winId] of Object.entries(tracker)) {
+      if (winId && companionWindowIds.has(winId)) {
+        const createTime = windowCreationTimes.get(winId) || 0;
+        if (Date.now() - createTime < 1000) continue;
+
+        const win = await chrome.windows.get(winId).catch(() => null);
+        if (win && win.state === 'normal' && typeof win.left === 'number' && typeof win.top === 'number') {
+          await saveAppBounds(appId, {
+            left: win.left,
+            top: win.top,
+            width: win.width,
+            height: win.height
+          });
+        }
+      }
+    }
+  } catch (e) {}
 });
 
 // Window removed listener: clean up rules and tracking
