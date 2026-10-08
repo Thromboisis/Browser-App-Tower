@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Tab</title>
+  <link rel="stylesheet" href="newtab.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon48.png">
+</head>
+<body id="newtab-body">
+  <!-- Dynamic Background Overlay -->
+  <div id="bg-overlay" class="bg-overlay"></div>
+
+  <!-- Top Controls Bar -->
+  <header class="top-nav">
+    <div class="top-nav-left">
+      <div id="disabled-override-banner" class="override-banner" style="display: none;">
+        <span>New Tab Override is disabled in settings.</span>
+        <button id="banner-btn-enable" class="banner-btn">Enable in Settings</button>
+      </div>
+    </div>
+    <div class="top-nav-right">
+      <button id="btn-config-gear" class="gear-btn" title="New Tab & Extension Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Draggable Live Clock Applet -->
+  <div id="draggable-clock-applet" class="draggable-applet clock-applet" style="left: 60px; top: 90px;">
+    <div class="applet-drag-header" title="Drag to reposition clock">
+      <div class="applet-drag-grip">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+          <circle cx="8" cy="6" r="1.5"></circle>
+          <circle cx="16" cy="6" r="1.5"></circle>
+          <circle cx="8" cy="12" r="1.5"></circle>
+          <circle cx="16" cy="12" r="1.5"></circle>
+          <circle cx="8" cy="18" r="1.5"></circle>
+          <circle cx="16" cy="18" r="1.5"></circle>
+        </svg>
+        <span class="applet-title">Live Clock</span>
+      </div>
+      <div class="applet-badge">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a8 8 0 0 0-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 0 0-8-8z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <span id="clock-location-text">Local</span>
+      </div>
+    </div>
+    <div class="clock-body">
+      <div class="clock-digits">
+        <span id="clock-time-val">12:00</span>
+        <span id="clock-ampm" class="clock-ampm">PM</span>
+      </div>
+      <div id="clock-date-val" class="clock-date">Thursday, Oct 8</div>
+    </div>
+  </div>
+
+  <!-- Draggable Live Weather Applet -->
+  <div id="draggable-weather-applet" class="draggable-applet weather-applet" style="left: 60px; top: 230px;">
+    <div class="applet-drag-header" title="Drag to reposition weather">
+      <div class="applet-drag-grip">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+          <circle cx="8" cy="6" r="1.5"></circle>
+          <circle cx="16" cy="6" r="1.5"></circle>
+          <circle cx="8" cy="12" r="1.5"></circle>
+          <circle cx="16" cy="12" r="1.5"></circle>
+          <circle cx="8" cy="18" r="1.5"></circle>
+          <circle cx="16" cy="18" r="1.5"></circle>
+        </svg>
+        <span class="applet-title">Live Weather</span>
+      </div>
+      <div class="applet-badge">
+        <span id="weather-location-text">Local Forecast</span>
+      </div>
+    </div>
+    <div class="weather-body">
+      <div class="weather-main-row">
+        <div class="weather-icon-box">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.41 1.41"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m6.34 17.66-1.41 1.41"></path>
+            <path d="m19.07 4.93-1.41 1.41"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="weather-temp-row">
+            <span id="weather-temp-val">72</span>°F
+          </div>
+          <div id="weather-condition-val" class="weather-desc">Sunny / Clear</div>
+        </div>
+      </div>
+      <div class="weather-meta-row">
+        <span><strong id="weather-wind-val">6</strong> mph wind</span>
+        <span>•</span>
+        <span><strong id="weather-humidity-val">45</strong>% humidity</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center Hero Section -->
+  <main class="hero-container">
+    <div class="brand-title">
+      <h1>App Tower</h1>
+      <p>Clean Start Dashboard</p>
+    </div>
+
+    <!-- Search Box -->
+    <form id="search-form" class="search-form" action="https://www.google.com/search" method="GET">
+      <div class="search-input-shell">
+        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input id="search-input" name="q" type="text" placeholder="Search the web or type a URL..." autofocus autocomplete="off" />
+        <button type="submit" class="search-submit-btn" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </form>
+
+    <!-- Quick Shortcuts Grid -->
+    <div id="shortcuts-grid" class="shortcuts-grid"></div>
+
+    <div class="dock-active-badge">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      </svg>
+      <span>App Tower Sidebar Dock Active</span>
+    </div>
+  </main>
+
+  <!-- Configuration Modal Drawer -->
+  <div id="config-modal-backdrop" class="modal-backdrop">
+    <div id="config-modal" class="config-modal">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#3b82f6" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <h3>New Tab Configuration</h3>
+        </div>
+        <button id="btn-close-modal" class="btn-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-content">
+        <!-- 1. Search Engine Selector -->
+        <div class="setting-group">
+          <label class="setting-title">Default Search Provider</label>
+          <div class="search-provider-grid">
+            <button type="button" class="provider-pill active" data-provider="google">Google</button>
+            <button type="button" class="provider-pill" data-provider="bing">Bing</button>
+            <button type="button" class="provider-pill" data-provider="duckduckgo">DuckDuckGo</button>
+            <button type="button" class="provider-pill" data-provider="kagi">Kagi</button>
+          </div>
+        </div>
+
+        <!-- 2. Wallpaper Picker -->
+        <div class="setting-group">
+          <label class="setting-title">Dashboard Background</label>
+          <div class="wallpaper-options">
+            <button type="button" class="wallpaper-pill active" data-bg="gradient">Dark Studio</button>
+            <button type="button" class="wallpaper-pill" data-bg="bing">Daily Bing</button>
+            <button type="button" class="wallpaper-pill" data-bg="mountain">Mountains</button>
+            <button type="button" class="wallpaper-pill" data-bg="cosmic">Cosmic</button>
+          </div>
+        </div>
+
+        <!-- 3. Live Clock Widget Toggle -->
+        <div class="setting-toggle-row">
+          <div>
+            <span class="setting-label">Live Clock Widget</span>
+            <span class="setting-subtext">Draggable modal with current time</span>
+          </div>
+          <label class="switch">
+            <input id="toggle-clock-widget" type="checkbox" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 4. Live Weather Widget Toggle -->
+        <div class="setting-toggle-row">
+          <div>
+            <span class="setting-label">Live Weather Widget</span>
+            <span class="setting-subtext">Draggable local weather card</span>
+          </div>
+          <label class="switch">
+            <input id="toggle-weather-widget" type="checkbox" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 5. Reset Widget Positions -->
+        <div class="setting-action-row">
+          <button id="btn-reset-widgets" type="button" class="btn-secondary">Reset Widget Positions</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="newtab.js"></script>
+</body>
+</html>
