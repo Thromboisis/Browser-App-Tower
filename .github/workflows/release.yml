@@ -1,0 +1,75 @@
+name: Build & Release Extension Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Package Extensions for Chrome & Firefox
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare extension packages
+        run: |
+          mkdir -p dist
+          
+          # 1. Package Chrome Extension
+          mkdir -p /tmp/chrome-build
+          cp -r extension/* /tmp/chrome-build/
+          cd /tmp/chrome-build
+          zip -r $GITHUB_WORKSPACE/dist/app-tower-chrome.zip . -x "*.DS_Store" "*__MACOSX*"
+          cd $GITHUB_WORKSPACE
+
+          # 2. Package Firefox Extension (adjust manifest for Firefox AMO requirements)
+          mkdir -p /tmp/firefox-build
+          cp -r extension/* /tmp/firefox-build/
+          
+          # Inject browser_specific_settings into manifest.json for Firefox
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("/tmp/firefox-build/manifest.json", "utf8"));
+            
+            // Add Firefox Gecko ID
+            manifest.browser_specific_settings = {
+              gecko: {
+                id: "app-tower-sidebar@local",
+                strict_min_version: "113.0"
+              }
+            };
+            
+            // Ensure background script works across all Firefox MV3 versions
+            manifest.background = {
+              scripts: ["background.js"]
+            };
+            
+            fs.writeFileSync("/tmp/firefox-build/manifest.json", JSON.stringify(manifest, null, 2));
+          '
+          
+          cd /tmp/firefox-build
+          zip -r $GITHUB_WORKSPACE/dist/app-tower-firefox.zip . -x "*.DS_Store" "*__MACOSX*"
+          cd $GITHUB_WORKSPACE
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/app-tower-chrome.zip
+            dist/app-tower-firefox.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

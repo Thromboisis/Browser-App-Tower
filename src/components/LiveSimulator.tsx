@@ -75,22 +75,7 @@ interface WindowBounds {
   height: number;
 }
 
-const DEFAULT_APPS: ConfigApp[] = [
-  {
-    id: 'keep',
-    name: 'Google Keep',
-    url: 'https://keep.google.com/',
-    isMobile: false,
-    iconType: 'keep'
-  },
-  {
-    id: 'messages',
-    name: 'Google Messages',
-    url: 'https://messages.google.com/web',
-    isMobile: false,
-    iconType: 'messages'
-  }
-];
+const DEFAULT_APPS: ConfigApp[] = [];
 
 export const LiveSimulator: React.FC = () => {
   const [apps, setApps] = useState<ConfigApp[]>(() => {
@@ -98,12 +83,12 @@ export const LiveSimulator: React.FC = () => {
       const saved = localStorage.getItem('app_tower_apps');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
     return DEFAULT_APPS;
   });
-  const [activeAppId, setActiveAppId] = useState<string | null>('keep');
+  const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');

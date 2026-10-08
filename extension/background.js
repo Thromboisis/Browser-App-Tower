@@ -11,20 +11,7 @@
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
 const DESKTOP_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
-const DEFAULT_APPS = [
-  {
-    id: 'keep',
-    name: 'Google Keep',
-    url: 'https://keep.google.com/',
-    isMobile: false
-  },
-  {
-    id: 'messages',
-    name: 'Google Messages',
-    url: 'https://messages.google.com/web',
-    isMobile: false
-  }
-];
+const DEFAULT_APPS = [];
 
 // Set of in-memory active companion window IDs (so content script knows not to inject sidebar)
 const companionWindowIds = new Set();
@@ -32,8 +19,8 @@ const companionWindowIds = new Set();
 // Initialize default storage on install
 chrome.runtime.onInstalled.addListener(async () => {
   const data = await chrome.storage.local.get(['companion_windows', 'dock_apps', 'app_bounds', 'dock_collapsed']);
-  if (!data.dock_apps || !Array.isArray(data.dock_apps) || data.dock_apps.length === 0) {
-    await chrome.storage.local.set({ dock_apps: DEFAULT_APPS });
+  if (!Array.isArray(data.dock_apps)) {
+    await chrome.storage.local.set({ dock_apps: [] });
   }
   if (!data.companion_windows) {
     await chrome.storage.local.set({ companion_windows: {} });

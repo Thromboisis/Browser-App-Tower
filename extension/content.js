@@ -852,11 +852,8 @@
     `;
     shadow.appendChild(styleTag);
 
-    // 4. Default Applications
-    let currentApps = [
-      { id: 'keep', name: 'Google Keep', url: 'https://keep.google.com/', isMobile: false },
-      { id: 'messages', name: 'Google Messages', url: 'https://messages.google.com/web', isMobile: false }
-    ];
+    // 4. Default Applications (starts blank so users can customize their own list)
+    let currentApps = [];
 
     let activeAppWindows = {};
 
@@ -1764,7 +1761,7 @@
       }
       updateDockStyles();
 
-      if (data.dock_apps && Array.isArray(data.dock_apps) && data.dock_apps.length > 0) {
+      if (data.dock_apps && Array.isArray(data.dock_apps)) {
         currentApps = data.dock_apps;
       }
       renderAppButtons();
