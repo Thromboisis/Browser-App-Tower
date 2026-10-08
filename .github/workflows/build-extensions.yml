@@ -1,0 +1,62 @@
+name: Build App Tower Extensions
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Chrome & Firefox Extensions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web App & Extensions
+        run: npm run build
+
+      - name: Verify Generated ZIPs
+        run: |
+          ls -lh dist/app-tower-chrome.zip
+          ls -lh dist/app-tower-firefox.zip
+
+      - name: Upload Chrome Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-tower-chrome-extension
+          path: dist/app-tower-chrome.zip
+          if-no-files-found: error
+
+      - name: Upload Firefox Extension Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-tower-firefox-extension
+          path: dist/app-tower-firefox.zip
+          if-no-files-found: error
+
+      - name: Release to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/app-tower-chrome.zip
+            dist/app-tower-firefox.zip
+          generate_release_notes: true

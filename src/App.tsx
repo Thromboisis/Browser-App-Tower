@@ -9,14 +9,11 @@ import {
   Code2, 
   ShieldCheck, 
   BookOpen, 
-  FolderArchive, 
-  Sparkles, 
-  Layers, 
   PanelRight,
-  ExternalLink,
-  Github,
   CheckCircle2,
-  Download
+  Download,
+  Chrome,
+  Globe
 } from 'lucide-react';
 import { LiveSimulator } from './components/LiveSimulator';
 import { CodeViewer } from './components/CodeViewer';
@@ -26,23 +23,23 @@ import { downloadExtensionZip } from './utils/downloadExtension';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'simulator' | 'code' | 'rules' | 'install'>('simulator');
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadingBrowser, setDownloadingBrowser] = useState<'chrome' | 'firefox' | null>(null);
 
-  const handleDownload = async () => {
+  const handleDownload = async (browser: 'chrome' | 'firefox') => {
     try {
-      setIsDownloading(true);
-      await downloadExtensionZip();
+      setDownloadingBrowser(browser);
+      await downloadExtensionZip(browser);
     } catch (e) {
       console.error(e);
     } finally {
-      setIsDownloading(false);
+      setDownloadingBrowser(null);
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 p-[1px] shadow-lg shadow-blue-500/20">
             <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center text-blue-400">
@@ -52,23 +49,26 @@ export default function App() {
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold tracking-tight text-white">App Tower Extension</h1>
+              <h1 className="text-sm font-bold tracking-tight text-white">App Tower Sidebar</h1>
               <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                Manifest V3
+                v1.3 MV3
+              </span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                Chrome & Firefox
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Direct Unpack & Load Ready • No Moving Files Required
+              One Codebase • Multi-Browser Automatic Build & ZIP Packaging
             </p>
           </div>
         </div>
 
-        {/* Tab Controls & Direct Download CTA */}
-        <div className="flex items-center gap-3">
-          <nav className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs">
+        {/* Tab Controls & Multi-Browser Download CTAs */}
+        <div className="flex items-center flex-wrap gap-2.5">
+          <nav className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs">
             <button
               onClick={() => setActiveTab('simulator')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
                 activeTab === 'simulator'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -80,7 +80,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('code')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
                 activeTab === 'code'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -92,7 +92,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('rules')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
                 activeTab === 'rules'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -104,7 +104,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('install')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
                 activeTab === 'install'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -115,14 +115,28 @@ export default function App() {
             </button>
           </nav>
 
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition active:scale-95 disabled:opacity-50"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{isDownloading ? 'Packaging...' : 'Download ZIP'}</span>
-          </button>
+          {/* Chrome & Firefox Dual Download Buttons */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleDownload('chrome')}
+              disabled={downloadingBrowser !== null}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-sm shadow-blue-500/20 transition active:scale-95 disabled:opacity-50"
+              title="Download Chrome & Edge compatible ZIP package"
+            >
+              <Chrome className="w-3.5 h-3.5" />
+              <span>{downloadingBrowser === 'chrome' ? 'Packaging...' : 'Chrome ZIP'}</span>
+            </button>
+
+            <button
+              onClick={() => handleDownload('firefox')}
+              disabled={downloadingBrowser !== null}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold shadow-sm shadow-orange-500/20 transition active:scale-95 disabled:opacity-50"
+              title="Download Firefox compatible WebExtension ZIP package"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{downloadingBrowser === 'firefox' ? 'Packaging...' : 'Firefox ZIP'}</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -136,16 +150,16 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 px-6 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span>App Tower Sidebar for Google Chrome</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span>App Tower Sidebar v1.3</span>
           <span>•</span>
-          <span>Manifest V3</span>
+          <span>Unified Codebase for Google Chrome & Mozilla Firefox</span>
           <span>•</span>
-          <span>Shadow DOM Encapsulation</span>
+          <span>Automated Dual-ZIP Packaging</span>
         </div>
         <div className="flex items-center gap-4 text-[11px]">
           <span className="text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Chrome Load Unpacked
+            <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Chrome & Firefox Unpack
           </span>
         </div>
       </footer>
