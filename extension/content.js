@@ -42,6 +42,7 @@
     let currentDockWidth = 44;
     let currentDockColor = '#12141a';
     let newTabOverrideEnabled = false;
+    let cachedFavicons = {};
     const originalMarginRight = document.documentElement.style.marginRight || '';
 
     function reserveDockMargin() {
@@ -1171,8 +1172,14 @@
       }, 2200);
     }
 
-    // 6. Icon Rendering Helper (Clean SVGs)
+    // 6. Icon Rendering Helper (Clean authentic Favicon with crisp fallbacks)
     function getAppIconSvg(app) {
+      // Check for authentic favicon saved from loaded page or background worker
+      const faviconSrc = app.favicon || cachedFavicons[app.id];
+      if (faviconSrc) {
+        return `<img src="${faviconSrc}" alt="${app.name}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" /><svg style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+      }
+
       if (app.id === 'keep') {
         return `
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1193,8 +1200,14 @@
 
       try {
         const urlObj = new URL(app.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
-        return `<img src="${faviconUrl}" alt="${app.name}" style="width: 18px; height: 18px; border-radius: 4px; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" /><svg style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+        let chromeFaviconUrl = '';
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+          try {
+            chromeFaviconUrl = chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(app.url)}&size=32`);
+          } catch (e) {}
+        }
+        const fallbackUrl = chromeFaviconUrl || `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+        return `<img src="${fallbackUrl}" alt="${app.name}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: contain; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" /><svg style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
       } catch (e) {
         return `
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1645,12 +1658,17 @@
       if (isEditing) {
         const index = currentApps.findIndex(a => a.id === editingAppId);
         if (index !== -1) {
+          const urlChanged = currentApps[index].url !== url;
           currentApps[index] = {
             ...currentApps[index],
             name: name,
             url: url,
-            isMobile: modalIsMobile
+            isMobile: modalIsMobile,
+            favicon: urlChanged ? '' : (currentApps[index].favicon || '')
           };
+          if (urlChanged) {
+            delete cachedFavicons[editingAppId];
+          }
           savedApp = currentApps[index];
         }
       } else {
@@ -1659,7 +1677,8 @@
           id: newId,
           name: name,
           url: url,
-          isMobile: modalIsMobile
+          isMobile: modalIsMobile,
+          favicon: ''
         };
         currentApps.push(savedApp);
       }
@@ -1720,6 +1739,18 @@
         activeAppWindows[message.app] = message.isOpen;
         return true;
       }
+
+      if (message.action === 'app_favicon_updated') {
+        if (message.appId && message.favicon) {
+          cachedFavicons[message.appId] = message.favicon;
+          const found = currentApps.find(a => a.id === message.appId);
+          if (found) {
+            found.favicon = message.favicon;
+          }
+          renderAppButtons();
+        }
+        return true;
+      }
     });
 
     // Global dismiss context menu on click outside
@@ -1728,7 +1759,7 @@
     });
 
     // 13. Initialize on Load
-    chrome.storage.local.get(['dock_apps', 'dock_collapsed', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
+    chrome.storage.local.get(['dock_apps', 'app_favicons', 'dock_collapsed', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
       if (typeof data.dock_width === 'number') {
         currentDockWidth = data.dock_width;
       }
@@ -1737,6 +1768,9 @@
       }
       if (typeof data.new_tab_override_enabled === 'boolean') {
         newTabOverrideEnabled = data.new_tab_override_enabled;
+      }
+      if (data.app_favicons && typeof data.app_favicons === 'object') {
+        cachedFavicons = data.app_favicons;
       }
       updateDockStyles();
 
@@ -1763,6 +1797,10 @@
       if (areaName === 'local') {
         if (changes.dock_apps && Array.isArray(changes.dock_apps.newValue)) {
           currentApps = changes.dock_apps.newValue;
+          renderAppButtons();
+        }
+        if (changes.app_favicons && changes.app_favicons.newValue) {
+          cachedFavicons = changes.app_favicons.newValue;
           renderAppButtons();
         }
         if (changes.dock_collapsed && typeof changes.dock_collapsed.newValue === 'boolean') {

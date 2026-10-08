@@ -6,7 +6,8 @@ export const downloadExtensionZip = async (target: 'chrome' | 'firefox' = 'chrom
   const isFirefox = target === 'firefox';
 
   // 1. Add all core extension files directly at the root level of the ZIP
-  Object.entries(EXTENSION_FILES).forEach(([filename, file]) => {
+  EXTENSION_FILES.forEach((file) => {
+    const filename = file.filename;
     let content = file.content;
 
     // Adapt manifest for Firefox if target is firefox
@@ -16,6 +17,20 @@ export const downloadExtensionZip = async (target: 'chrome' | 'firefox' = 'chrom
         if (manifestObj.background && manifestObj.background.service_worker) {
           const sw = manifestObj.background.service_worker;
           manifestObj.background = { scripts: [sw] };
+        }
+        if (Array.isArray(manifestObj.permissions)) {
+          manifestObj.permissions = manifestObj.permissions.filter((p: string) => p !== 'favicon');
+        }
+        if (Array.isArray(manifestObj.web_accessible_resources)) {
+          manifestObj.web_accessible_resources = manifestObj.web_accessible_resources.map((entry: any) => {
+            if (Array.isArray(entry.resources)) {
+              return {
+                ...entry,
+                resources: entry.resources.filter((r: string) => !r.includes('_favicon'))
+              };
+            }
+            return entry;
+          }).filter((entry: any) => Array.isArray(entry.resources) && entry.resources.length > 0);
         }
         manifestObj.browser_specific_settings = {
           gecko: {

@@ -18,7 +18,7 @@ const companionWindowIds = new Set();
 
 // Initialize default storage on install
 chrome.runtime.onInstalled.addListener(async () => {
-  const data = await chrome.storage.local.get(['companion_windows', 'dock_apps', 'app_bounds', 'dock_collapsed']);
+  const data = await chrome.storage.local.get(['companion_windows', 'dock_apps', 'app_bounds', 'dock_collapsed', 'app_favicons']);
   if (!data.dock_apps || !Array.isArray(data.dock_apps)) {
     await chrome.storage.local.set({ dock_apps: [] });
   }
@@ -27,6 +27,9 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
   if (!data.app_bounds) {
     await chrome.storage.local.set({ app_bounds: {} });
+  }
+  if (!data.app_favicons) {
+    await chrome.storage.local.set({ app_favicons: {} });
   }
   if (typeof data.dock_collapsed !== 'boolean') {
     await chrome.storage.local.set({ dock_collapsed: false });
@@ -69,12 +72,18 @@ async function getSavedAppBounds(appId) {
   }
 }
 
-// Helper to save bounds for an app
+// Helper to save bounds for an app with validated integer coordinates
 async function saveAppBounds(appId, bounds) {
   try {
+    if (!bounds || typeof bounds.left !== 'number' || typeof bounds.top !== 'number') return;
     const data = await chrome.storage.local.get(['app_bounds']);
     const allBounds = (data && data.app_bounds) || {};
-    allBounds[appId] = bounds;
+    allBounds[appId] = {
+      left: Math.round(bounds.left),
+      top: Math.round(bounds.top),
+      width: Math.round(bounds.width || 480),
+      height: Math.round(bounds.height || 760)
+    };
     await chrome.storage.local.set({ app_bounds: allBounds });
   } catch (e) {
     console.error('Failed to save app bounds:', e);
@@ -91,6 +100,98 @@ async function resetAppBounds(appId) {
   } catch (e) {
     console.error('Failed to reset app bounds:', e);
   }
+}
+
+// Helper to fetch any image URL and convert it to a self-contained base64 Data URI
+// This guarantees immunity to host-page Content Security Policy (CSP) and cross-origin blocks
+async function fetchImageAsDataUri(url) {
+  if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('data:')) return url;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i += 8192) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, len)));
+    }
+    const base64 = btoa(binary);
+    const mime = blob.type || 'image/png';
+    return `data:${mime};base64,${base64}`;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Helper to update, store, and broadcast the real webpage favicon for an app
+async function updateAppFavicon(appId, favIconUrl) {
+  if (!appId || !favIconUrl) return;
+  try {
+    let finalFavicon = await fetchImageAsDataUri(favIconUrl);
+    if (!finalFavicon) {
+      finalFavicon = favIconUrl;
+    }
+
+    // 1. Update app in dock_apps list
+    const data = await chrome.storage.local.get(['dock_apps', 'app_favicons']);
+    const apps = data.dock_apps || [];
+    let appChanged = false;
+    for (const app of apps) {
+      if (app.id === appId) {
+        if (app.favicon !== finalFavicon) {
+          app.favicon = finalFavicon;
+          appChanged = true;
+        }
+        break;
+      }
+    }
+    if (appChanged) {
+      await chrome.storage.local.set({ dock_apps: apps });
+    }
+
+    // 2. Cache in dedicated app_favicons map
+    const favicons = data.app_favicons || {};
+    favicons[appId] = finalFavicon;
+    await chrome.storage.local.set({ app_favicons: favicons });
+
+    // 3. Broadcast to all open tabs so the dock icon updates in real-time
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (tab.id && tab.url && !tab.url.startsWith('chrome://')) {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'app_favicon_updated',
+          appId: appId,
+          favicon: finalFavicon
+        }).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error('Error updating app favicon:', err);
+  }
+}
+
+// Pre-fetch initial favicon when an app is added or edited, before the window even opens
+async function fetchInitialFavicon(appId, appUrl) {
+  if (!appId || !appUrl) return;
+  try {
+    const urlObj = new URL(appUrl);
+    // Try Google S2 service first for a crisp 64px icon converted to Data URI
+    const s2Url = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+    let dataUri = await fetchImageAsDataUri(s2Url);
+    if (!dataUri) {
+      // Fallback: direct origin favicon.ico
+      dataUri = await fetchImageAsDataUri(`${urlObj.origin}/favicon.ico`);
+    }
+    if (dataUri) {
+      await updateAppFavicon(appId, dataUri);
+    }
+  } catch (e) {}
 }
 
 // Helper to get app configuration
@@ -221,6 +322,42 @@ async function removeTabUserAgentRule(tabId) {
 // Clean up rules when tabs close
 chrome.tabs.onRemoved.addListener((tabId) => {
   removeTabUserAgentRule(tabId);
+});
+
+// Capture authoritative webpage favicon whenever companion window tab updates or loads
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!tab || !tab.windowId) return;
+
+  const favIconUrl = changeInfo.favIconUrl || tab.favIconUrl;
+  if (!favIconUrl) return;
+
+  // Check if this tab is hosted in an active companion window
+  const tracker = await getStoredTracker();
+  let matchedAppId = null;
+  for (const [appId, winId] of Object.entries(tracker)) {
+    if (winId === tab.windowId) {
+      matchedAppId = appId;
+      break;
+    }
+  }
+
+  // Fallback: match by companionWindowIds set and domain
+  if (!matchedAppId && companionWindowIds.has(tab.windowId)) {
+    const data = await chrome.storage.local.get(['dock_apps']);
+    const apps = data.dock_apps || [];
+    for (const app of apps) {
+      try {
+        if (app.url && tab.url && new URL(app.url).hostname === new URL(tab.url).hostname) {
+          matchedAppId = app.id;
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (matchedAppId) {
+    await updateAppFavicon(matchedAppId, favIconUrl);
+  }
 });
 
 // Helper to find existing companion window for an app
@@ -365,6 +502,11 @@ async function handleAppConfigUpdated(appId, appConfig, sender) {
       width: defaultWidth,
       height: Math.round(defaultHeight)
     });
+  }
+
+  // Fetch initial crisp favicon for the configured URL
+  if (appConfig.url) {
+    fetchInitialFavicon(appId, appConfig.url);
   }
 
   // If the window is currently open, DO NOT force resize or reposition it!
@@ -515,13 +657,27 @@ async function handleToggleWindow(appId, appUrlOverride, isMobileOverride, clien
     tracker[appId] = newWin.id;
     await saveStoredTracker(tracker);
 
-    // Save initial bounds immediately
-    if (typeof newWin.left === 'number' && typeof newWin.top === 'number') {
+    // CRITICAL: Chromium frequently ignores left & top when creating popups.
+    // Call chrome.windows.update immediately to force the exact saved coordinates & size!
+    try {
+      await chrome.windows.update(newWin.id, {
+        left: Math.round(targetLeft),
+        top: Math.round(targetTop),
+        width: Math.round(targetWidth),
+        height: Math.round(targetHeight)
+      });
+    } catch (e) {
+      console.warn('Initial window update position warning:', e);
+    }
+
+    // Only save initial bounds if this app did NOT already have saved bounds.
+    // Never overwrite an already saved position with transient window creation coordinates!
+    if (!savedBounds) {
       await saveAppBounds(appId, {
-        left: newWin.left,
-        top: newWin.top,
-        width: newWin.width || Math.round(targetWidth),
-        height: newWin.height || Math.round(targetHeight)
+        left: Math.round(targetLeft),
+        top: Math.round(targetTop),
+        width: Math.round(targetWidth),
+        height: Math.round(targetHeight)
       });
     }
 
@@ -548,24 +704,55 @@ chrome.windows.onBoundsChanged.addListener(async (win) => {
   if (!win || !win.id) return;
   if (win.state && win.state !== 'normal') return;
 
-  const tracker = await getStoredTracker();
-  for (const [appId, trackedWinId] of Object.entries(tracker)) {
-    if (trackedWinId === win.id) {
-      if (
-        typeof win.left === 'number' &&
-        typeof win.top === 'number' &&
-        typeof win.width === 'number' &&
-        typeof win.height === 'number'
-      ) {
-        await saveAppBounds(appId, {
-          left: win.left,
-          top: win.top,
-          width: win.width,
-          height: win.height
-        });
+  try {
+    // In Chromium, win object passed to onBoundsChanged may have incomplete properties.
+    // Use chrome.windows.get to retrieve authoritative coordinates and dimensions.
+    const fullWin = await chrome.windows.get(win.id);
+    if (!fullWin || fullWin.state !== 'normal') return;
+
+    const tracker = await getStoredTracker();
+    let matchedAppId = null;
+    for (const [appId, trackedWinId] of Object.entries(tracker)) {
+      if (trackedWinId === fullWin.id) {
+        matchedAppId = appId;
+        break;
       }
-      break;
     }
+
+    // Fallback: match by companion window ID set and tab URL
+    if (!matchedAppId && companionWindowIds.has(fullWin.id)) {
+      const data = await chrome.storage.local.get(['dock_apps']);
+      const apps = data.dock_apps || [];
+      const populated = await chrome.windows.get(fullWin.id, { populate: true }).catch(() => null);
+      if (populated && populated.tabs && populated.tabs[0]) {
+        const tabUrl = populated.tabs[0].url;
+        for (const app of apps) {
+          try {
+            if (app.url && tabUrl && new URL(app.url).hostname === new URL(tabUrl).hostname) {
+              matchedAppId = app.id;
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (
+      matchedAppId &&
+      typeof fullWin.left === 'number' &&
+      typeof fullWin.top === 'number' &&
+      typeof fullWin.width === 'number' &&
+      typeof fullWin.height === 'number'
+    ) {
+      await saveAppBounds(matchedAppId, {
+        left: fullWin.left,
+        top: fullWin.top,
+        width: fullWin.width,
+        height: fullWin.height
+      });
+    }
+  } catch (err) {
+    // Window may have closed during async lookup
   }
 });
 

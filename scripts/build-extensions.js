@@ -43,7 +43,23 @@ function createFirefoxManifest(chromeManifestObj) {
     };
   }
 
-  // 2. Add Gecko browser-specific settings for Firefox
+  // 2. Filter out Chrome-only permissions and web_accessible_resources if present
+  if (Array.isArray(firefoxManifest.permissions)) {
+    firefoxManifest.permissions = firefoxManifest.permissions.filter(p => p !== 'favicon');
+  }
+  if (Array.isArray(firefoxManifest.web_accessible_resources)) {
+    firefoxManifest.web_accessible_resources = firefoxManifest.web_accessible_resources.map(entry => {
+      if (Array.isArray(entry.resources)) {
+        return {
+          ...entry,
+          resources: entry.resources.filter(r => !r.includes('_favicon'))
+        };
+      }
+      return entry;
+    }).filter(entry => Array.isArray(entry.resources) && entry.resources.length > 0);
+  }
+
+  // 3. Add Gecko browser-specific settings for Firefox
   firefoxManifest.browser_specific_settings = {
     gecko: {
       id: 'app-tower-sidebar@local',
