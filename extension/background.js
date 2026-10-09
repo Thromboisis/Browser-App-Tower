@@ -432,15 +432,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Receive direct screen coordinates reported from companion window tab DOM
-  if (message.action === 'companion_window_moved') {
-    if (message.appId && message.bounds) {
-      saveAppBounds(message.appId, message.bounds);
-    }
-    sendResponse({ success: true });
-    return true;
-  }
-
   if (message.action === 'toggle_companion_window') {
     handleToggleWindow(message.app, message.url, message.isMobile, message.metrics, sender);
     sendResponse({ success: true });
@@ -583,7 +574,6 @@ async function handleResetAppBounds(appId, sender) {
         top: Math.round(defaultTop),
         width: defaultWidth,
         height: Math.round(defaultHeight),
-        state: 'normal',
         focused: true
       });
     } catch (e) {
@@ -684,25 +674,27 @@ async function handleToggleWindow(appId, appUrlOverride, isMobileOverride, clien
 
     // CRITICAL MULTI-STAGE REPOSITIONING WORKAROUND:
     // Chromium's window manager frequently ignores left & top upon popup creation,
-    // placing it at OS cascading coordinates. We apply multiple staged reposition passes:
+    // placing it at OS cascading coordinates. We apply multiple staged reposition passes
+    // without invalid state arguments:
     // Pass 1: immediate
-    // Pass 2: 120ms (after OS window handle is fully registered & mapped)
-    // Pass 3: 350ms (after initial paint / page frame initialization)
+    // Pass 2: 100ms (after OS window handle is fully registered & mapped)
+    // Pass 3: 250ms (after initial paint / page frame initialization)
     const applyTargetBounds = async () => {
       try {
         await chrome.windows.update(newWin.id, {
           left: Math.round(targetLeft),
           top: Math.round(targetTop),
           width: Math.round(targetWidth),
-          height: Math.round(targetHeight),
-          state: 'normal'
+          height: Math.round(targetHeight)
         });
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[App Tower] Initial positioning notice:', e);
+      }
     };
 
     await applyTargetBounds();
-    setTimeout(applyTargetBounds, 120);
-    setTimeout(applyTargetBounds, 350);
+    setTimeout(applyTargetBounds, 100);
+    setTimeout(applyTargetBounds, 250);
 
     // Only save initial bounds if this app did NOT already have saved bounds.
     // Never overwrite an already saved position with transient window creation coordinates!
@@ -740,7 +732,7 @@ chrome.windows.onBoundsChanged.addListener(async (win) => {
 
   // Prevent transient creation events from overwriting the user's saved position
   const createTime = windowCreationTimes.get(win.id) || 0;
-  if (Date.now() - createTime < 1000) {
+  if (Date.now() - createTime < 350) {
     return;
   }
 
@@ -804,7 +796,7 @@ chrome.windows.onFocusChanged.addListener(async (focusedWinId) => {
     for (const [appId, winId] of Object.entries(tracker)) {
       if (winId && companionWindowIds.has(winId)) {
         const createTime = windowCreationTimes.get(winId) || 0;
-        if (Date.now() - createTime < 1000) continue;
+        if (Date.now() - createTime < 350) continue;
 
         const win = await chrome.windows.get(winId).catch(() => null);
         if (win && win.state === 'normal' && typeof win.left === 'number' && typeof win.top === 'number') {

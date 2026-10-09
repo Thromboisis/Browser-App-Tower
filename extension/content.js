@@ -26,45 +26,8 @@
       return;
     }
     if (response && response.isCompanion) {
-      // Companion window detected: skip sidebar insertion and track position
-      console.log('[App Tower] Companion app window detected - tracking position and excluding dock.');
-
-      const targetAppId = response.appId;
-      let lastReported = { x: null, y: null, w: null, h: null };
-
-      function reportBounds() {
-        if (!targetAppId) return;
-        const x = Math.round(window.screenX);
-        const y = Math.round(window.screenY);
-        const w = Math.round(window.outerWidth);
-        const h = Math.round(window.outerHeight);
-
-        // Ignore minimized or invalid dimensions
-        if (w < 200 || h < 200) return;
-
-        if (x !== lastReported.x || y !== lastReported.y || w !== lastReported.w || h !== lastReported.h) {
-          lastReported = { x, y, w, h };
-          try {
-            chrome.runtime.sendMessage({
-              action: 'companion_window_moved',
-              appId: targetAppId,
-              bounds: { left: x, top: y, width: w, height: h }
-            });
-          } catch (e) {}
-        }
-      }
-
-      window.addEventListener('resize', reportBounds);
-      window.addEventListener('blur', reportBounds);
-      window.addEventListener('beforeunload', reportBounds);
-      window.addEventListener('mouseup', reportBounds);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') reportBounds();
-      });
-
-      // Periodic check and initial sync
-      setInterval(reportBounds, 1500);
-      setTimeout(reportBounds, 1000);
+      // Companion window detected: skip sidebar insertion!
+      console.log('[App Tower] Companion app window detected - sidebar rail is excluded.');
       return;
     }
     initAppTowerDock();
@@ -82,17 +45,70 @@
     let cachedFavicons = {};
     const originalMarginRight = document.documentElement.style.marginRight || '';
 
+    // Inject dedicated layout guard style element into host page head or documentElement
+    let guardStyle = document.getElementById('app-tower-layout-guard');
+    if (!guardStyle) {
+      guardStyle = document.createElement('style');
+      guardStyle.id = 'app-tower-layout-guard';
+      (document.head || document.documentElement).appendChild(guardStyle);
+    }
+
     function reserveDockMargin() {
-      document.documentElement.style.setProperty('margin-right', `${currentDockWidth}px`, 'important');
+      const widthPx = `${currentDockWidth}px`;
+      document.documentElement.classList.add('app-tower-docked');
+      if (guardStyle) {
+        guardStyle.textContent = `
+          html.app-tower-docked {
+            margin-right: ${widthPx} !important;
+            width: calc(100vw - ${widthPx}) !important;
+            max-width: calc(100vw - ${widthPx}) !important;
+            box-sizing: border-box !important;
+          }
+          html.app-tower-docked body {
+            margin-right: ${widthPx} !important;
+            width: calc(100vw - ${widthPx}) !important;
+            max-width: calc(100vw - ${widthPx}) !important;
+            box-sizing: border-box !important;
+          }
+        `;
+      }
+      document.documentElement.style.setProperty('margin-right', widthPx, 'important');
+      document.documentElement.style.setProperty('width', `calc(100vw - ${widthPx})`, 'important');
+      document.documentElement.style.setProperty('max-width', `calc(100vw - ${widthPx})`, 'important');
       document.documentElement.style.setProperty('box-sizing', 'border-box', 'important');
+      if (document.body) {
+        document.body.style.setProperty('margin-right', widthPx, 'important');
+        document.body.style.setProperty('width', `calc(100vw - ${widthPx})`, 'important');
+        document.body.style.setProperty('max-width', `calc(100vw - ${widthPx})`, 'important');
+        document.body.style.setProperty('box-sizing', 'border-box', 'important');
+      }
     }
 
     function restoreDockMargin() {
+      document.documentElement.classList.remove('app-tower-docked');
+      if (guardStyle) {
+        guardStyle.textContent = '';
+      }
       if (originalMarginRight) {
         document.documentElement.style.marginRight = originalMarginRight;
       } else {
         document.documentElement.style.removeProperty('margin-right');
       }
+      document.documentElement.style.removeProperty('width');
+      document.documentElement.style.removeProperty('max-width');
+      if (document.body) {
+        document.body.style.removeProperty('margin-right');
+        document.body.style.removeProperty('width');
+        document.body.style.removeProperty('max-width');
+      }
+    }
+
+    // Immediately reserve margin so the dock never floats even during initial load
+    reserveDockMargin();
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (isDockVisible) reserveDockMargin();
+      });
     }
 
     function updateDockStyles() {
