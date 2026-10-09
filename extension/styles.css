@@ -47,6 +47,66 @@
   pointer-events: none !important;
 }
 
+/* Full-bleed SPA root containers like Outlook.com (#owa-root) */
+html.app-tower-docked #owa-root,
+html.app-tower-docked #app,
+html.app-tower-docked div[data-testid="app-root"] {
+  right: var(--dock-width, 44px) !important;
+  width: calc(100vw - var(--dock-width, 44px)) !important;
+  max-width: calc(100vw - var(--dock-width, 44px)) !important;
+  box-sizing: border-box !important;
+}
+
+/* Outlook.com Fluent UI layer hosts, overlay drawer containers & portal roots */
+html.app-tower-docked .ms-Layer,
+html.app-tower-docked [class*="ms-Layer"],
+html.app-tower-docked #fluent-default-layer-host,
+html.app-tower-docked [class*="ms-LayerHost"],
+html.app-tower-docked [class*="LayerHost"],
+html.app-tower-docked [class*="layer-host" i],
+html.app-tower-docked [class*="fui-Portal"],
+html.app-tower-docked [class*="fui-FluentProvider"] {
+  right: var(--dock-width, 44px) !important;
+  width: calc(100vw - var(--dock-width, 44px)) !important;
+  max-width: calc(100vw - var(--dock-width, 44px)) !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure Outlook "My Day" overlay, side pane & Fluent UI right panels dock cleanly adjacent to the App Tower sidebar */
+html.app-tower-docked .ms-Panel,
+html.app-tower-docked .ms-Panel-main,
+html.app-tower-docked .ms-Panel--right,
+html.app-tower-docked [class*="ms-Panel"],
+html.app-tower-docked [class*="fui-Drawer"],
+html.app-tower-docked [class*="fui-OverlayDrawer"],
+html.app-tower-docked [class*="fui-InlineDrawer"],
+html.app-tower-docked [class*="sidePane" i],
+html.app-tower-docked [class*="SidePane" i],
+html.app-tower-docked [class*="side-pane" i],
+html.app-tower-docked [class*="myDay" i],
+html.app-tower-docked [class*="MyDay" i],
+html.app-tower-docked [class*="FlexPane" i],
+html.app-tower-docked [class*="flexPane" i],
+html.app-tower-docked [data-testid*="myday" i],
+html.app-tower-docked [data-testid*="MyDay" i],
+html.app-tower-docked [data-testid*="sidePane" i],
+html.app-tower-docked [data-testid*="SidePane" i],
+html.app-tower-docked [data-testid*="side-pane" i],
+html.app-tower-docked [data-app="SidePane"],
+html.app-tower-docked [data-app="MyDay"],
+html.app-tower-docked [aria-label*="My Day" i],
+html.app-tower-docked [aria-label*="My day" i],
+html.app-tower-docked [aria-label*="Calendar and To Do" i],
+html.app-tower-docked [aria-label*="To Do" i][role="complementary"],
+html.app-tower-docked [aria-label*="Calendar" i][role="complementary"],
+html.app-tower-docked [role="complementary"],
+html.app-tower-docked #owa-myday-pane,
+html.app-tower-docked #sidePaneHost,
+html.app-tower-docked div[id*="sidePane" i],
+html.app-tower-docked div[id*="myDay" i] {
+  right: var(--dock-width, 44px) !important;
+}
+
 /* App list container (strictly vertical column) */
 .dock-section {
   display: flex !important;

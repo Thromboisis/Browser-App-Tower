@@ -36,6 +36,8 @@ import {
   Menu,
   Search,
   Settings,
+  Mail,
+  Calendar,
   CloudSun,
   CloudRain,
   Wind,
@@ -95,7 +97,8 @@ export const LiveSimulator: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [useLiveIframe, setUseLiveIframe] = useState(false);
-  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab'>('doc');
+  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab' | 'outlook'>('doc');
+  const [isMyDayOpen, setIsMyDayOpen] = useState(true);
 
   // Per-App saved window geometry (size & location)
   const [savedBounds, setSavedBounds] = useState<Record<string, WindowBounds>>(() => {
@@ -913,6 +916,7 @@ export const LiveSimulator: React.FC = () => {
               {activeWebsite === 'doc' && 'Google Docs - Product Specification.gdoc'}
               {activeWebsite === 'portal' && 'Internal Developer Hub & API Docs'}
               {activeWebsite === 'dashboard' && 'Analytics & Operations Dashboard'}
+              {activeWebsite === 'outlook' && 'Outlook Mail & My Day (outlook.live.com)'}
               {activeWebsite === 'newtab' && 'New Tab (App Tower Override)'}
             </span>
           </div>
@@ -924,6 +928,7 @@ export const LiveSimulator: React.FC = () => {
                 {activeWebsite === 'doc' && 'https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZj_A...'}
                 {activeWebsite === 'portal' && 'https://portal.internal.company.net/engineering/specs'}
                 {activeWebsite === 'dashboard' && 'https://analytics.workspace.google.com/live/metrics'}
+                {activeWebsite === 'outlook' && 'https://outlook.live.com/mail/0/'}
                 {activeWebsite === 'newtab' && 'chrome://newtab'}
               </span>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-2" />
@@ -951,6 +956,12 @@ export const LiveSimulator: React.FC = () => {
                 className={`px-2 py-0.5 rounded ${activeWebsite === 'dashboard' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
               >
                 Dashboard
+              </button>
+              <button
+                onClick={() => setActiveWebsite('outlook')}
+                className={`px-2 py-0.5 rounded ${activeWebsite === 'outlook' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+              >
+                Outlook
               </button>
               <button
                 onClick={() => setActiveWebsite('newtab')}
@@ -1143,6 +1154,171 @@ export const LiveSimulator: React.FC = () => {
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                       <span>App Tower Dock active on New Tab page</span>
                     </div>
+                  </div>
+                </div>
+              ) : activeWebsite === 'outlook' ? (
+                /* Outlook Web Mail Simulation with "My Day" side overlay */
+                <div className="relative w-full h-full flex flex-col bg-[#0b0f19] select-none overflow-hidden">
+                  {/* Outlook Blue Suite Bar */}
+                  <div className="h-11 bg-[#0078d4] text-white flex items-center justify-between px-3 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 font-bold text-sm tracking-wide">
+                        <Mail className="w-4 h-4 text-white" />
+                        <span>Outlook</span>
+                      </div>
+                      <div className="hidden md:flex items-center bg-white/20 hover:bg-white/30 rounded px-2.5 py-1 text-xs text-white placeholder-white/70 w-64">
+                        <Search className="w-3.5 h-3.5 mr-2 text-white/80" />
+                        <span className="text-white/80 text-[11px]">Search mail and people</span>
+                      </div>
+                    </div>
+
+                    {/* Top Right Actions with "My Day" button */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setIsMyDayOpen(!isMyDayOpen)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition cursor-pointer ${
+                          isMyDayOpen 
+                            ? 'bg-white text-[#0078d4] shadow-sm font-semibold' 
+                            : 'bg-white/15 hover:bg-white/25 text-white'
+                        }`}
+                        title="Toggle Outlook My Day pane (Calendar & To Do)"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>My Day</span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isMyDayOpen ? 'bg-emerald-500' : 'bg-white/60'}`}></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Outlook Main Workspace + My Day Overlay Area */}
+                  <div className="flex-1 flex overflow-hidden relative">
+                    {/* Left icon strip */}
+                    <div className="w-11 bg-slate-950 border-r border-slate-800/80 flex flex-col items-center py-3 gap-4 text-slate-400 shrink-0">
+                      <button className="text-blue-400 p-1.5 rounded hover:bg-slate-800"><Mail className="w-4 h-4" /></button>
+                      <button className="hover:text-white p-1.5 rounded hover:bg-slate-800"><Calendar className="w-4 h-4" /></button>
+                      <button className="hover:text-white p-1.5 rounded hover:bg-slate-800"><CheckSquare className="w-4 h-4" /></button>
+                    </div>
+
+                    {/* Folder column */}
+                    <div className="w-44 bg-slate-900/70 border-r border-slate-800/70 p-2 text-xs space-y-1 text-slate-300 hidden sm:block shrink-0">
+                      <div className="font-semibold text-slate-400 px-2 py-1 text-[11px] uppercase tracking-wider">Favorites</div>
+                      <div className="bg-blue-600/20 text-blue-300 px-2 py-1 rounded font-medium flex justify-between">
+                        <span>Inbox</span>
+                        <span className="font-semibold">3</span>
+                      </div>
+                      <div className="hover:bg-slate-800/60 px-2 py-1 rounded text-slate-400">Sent Items</div>
+                      <div className="hover:bg-slate-800/60 px-2 py-1 rounded text-slate-400">Drafts</div>
+                      <div className="hover:bg-slate-800/60 px-2 py-1 rounded text-slate-400">Archive</div>
+                    </div>
+
+                    {/* Email List */}
+                    <div className="w-60 bg-slate-900/40 border-r border-slate-800/60 overflow-y-auto p-2 space-y-1 text-xs shrink-0">
+                      <div className="p-2.5 rounded-lg bg-blue-950/40 border border-blue-800/40 text-slate-200">
+                        <div className="font-semibold text-blue-300 text-[11.5px] truncate">Engineering Weekly Sync</div>
+                        <div className="text-[11px] text-slate-400 truncate">Reminder: Review App Tower v1.9 release...</div>
+                        <div className="text-[10px] text-slate-500 mt-1">10:42 AM</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg hover:bg-slate-800/50 text-slate-300">
+                        <div className="font-medium text-[11.5px] truncate">Microsoft 365 Security Alert</div>
+                        <div className="text-[11px] text-slate-400 truncate">No action needed for verified accounts.</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Yesterday</div>
+                      </div>
+                      <div className="p-2.5 rounded-lg hover:bg-slate-800/50 text-slate-300">
+                        <div className="font-medium text-[11.5px] truncate">Design Team Architecture</div>
+                        <div className="text-[11px] text-slate-400 truncate">Side pane layout reservation updates.</div>
+                        <div className="text-[10px] text-slate-500 mt-1">Oct 7</div>
+                      </div>
+                    </div>
+
+                    {/* Reading Pane */}
+                    <div className="flex-1 p-5 overflow-y-auto bg-slate-950/50 text-slate-200 min-w-0">
+                      <div className="border-b border-slate-800 pb-3">
+                        <h2 className="text-base font-semibold text-white">Engineering Weekly Sync • App Tower Sidebar Integration</h2>
+                        <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
+                          <span className="font-medium text-slate-300">Alex Rivera (Lead Architect)</span>
+                          <span>•</span>
+                          <span>Today at 10:42 AM</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 text-xs text-slate-300 space-y-3 leading-relaxed">
+                        <p>Hi team,</p>
+                        <p>
+                          We've verified that the <strong>App Tower Sidebar</strong> now docks cleanly alongside Outlook on the web without floating!
+                        </p>
+                        <p>
+                          Click the <strong>"My Day"</strong> button in the top-right ribbon of Outlook above to toggle the side pane overlay on and off.
+                        </p>
+                        <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>The sidebar rail is anchored flush against the right edge. When My Day is open, it sits right next to the rail with zero overlapping.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* OUTLOOK "MY DAY" OVERLAY / SIDE PANE */}
+                    {isMyDayOpen && (
+                      <div className="w-72 h-full bg-[#151924] border-l border-slate-700/80 flex flex-col shrink-0 z-20 shadow-[-8px_0_24px_rgba(0,0,0,0.5)]">
+                        {/* My Day Header with tabs and close button */}
+                        <div className="p-3 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/60">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-white">My Day</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-300 font-medium">Calendar & To-Do</span>
+                          </div>
+                          <button 
+                            onClick={() => setIsMyDayOpen(false)}
+                            className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+                            title="Close My Day pane"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Calendar Agenda */}
+                        <div className="p-3 border-b border-slate-800/60 text-xs space-y-2">
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-blue-400" />
+                            <span>Today's Schedule</span>
+                          </div>
+                          <div className="space-y-1.5 text-[11px]">
+                            <div className="p-2 rounded bg-slate-900/90 border border-slate-800">
+                              <div className="font-semibold text-slate-200">10:00 AM • Sprint Planning</div>
+                              <div className="text-slate-400 text-[10.5px]">Teams Call (Room 4A)</div>
+                            </div>
+                            <div className="p-2 rounded bg-slate-900/90 border border-slate-800">
+                              <div className="font-semibold text-slate-200">1:30 PM • App Tower v1.9 Review</div>
+                              <div className="text-slate-400 text-[10.5px]">Outlook My Day verification</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* To-Do Tasks */}
+                        <div className="flex-1 p-3 overflow-y-auto text-xs space-y-2">
+                          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <CheckSquare className="w-3 h-3 text-emerald-400" />
+                            <span>To Do</span>
+                          </div>
+                          <div className="space-y-1.5 text-[11.5px] text-slate-300">
+                            <label className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-800/40 cursor-pointer">
+                              <input type="checkbox" defaultChecked className="rounded text-blue-600 accent-blue-500" />
+                              <span className="line-through text-slate-500">Update extension to v1.9</span>
+                            </label>
+                            <label className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-800/40 cursor-pointer">
+                              <input type="checkbox" defaultChecked className="rounded text-blue-600 accent-blue-500" />
+                              <span className="line-through text-slate-500">Remove sidebar shadow</span>
+                            </label>
+                            <label className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-800/40 cursor-pointer">
+                              <input type="checkbox" defaultChecked className="rounded text-blue-600 accent-blue-500" />
+                              <span className="text-emerald-300 font-medium">Verify My Day overlay docking</span>
+                            </label>
+                          </div>
+
+                          <div className="mt-4 p-2.5 rounded-lg bg-blue-950/40 border border-blue-500/30 text-[10.5px] text-blue-300 flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span>Notice: App Tower sidebar never overlays this pane!</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

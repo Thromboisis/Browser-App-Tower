@@ -39,6 +39,7 @@
     }
 
     // 1. Reserve dock margin on right edge of page content (Strictly Non-Floating)
+    let isDockVisible = true;
     let currentDockWidth = 44;
     let currentDockColor = '#12141a';
     let newTabOverrideEnabled = false;
@@ -78,7 +79,123 @@
           max-width: calc(100vw - ${widthPx}) !important;
           box-sizing: border-box !important;
         }
+        /* Outlook.com Fluent UI layer hosts, overlay drawer containers & portal roots */
+        html.app-tower-docked .ms-Layer,
+        html.app-tower-docked [class*="ms-Layer"],
+        html.app-tower-docked #fluent-default-layer-host,
+        html.app-tower-docked [class*="ms-LayerHost"],
+        html.app-tower-docked [class*="LayerHost"],
+        html.app-tower-docked [class*="layer-host" i],
+        html.app-tower-docked [class*="fui-Portal"],
+        html.app-tower-docked [class*="fui-FluentProvider"] {
+          right: ${widthPx} !important;
+          width: calc(100vw - ${widthPx}) !important;
+          max-width: calc(100vw - ${widthPx}) !important;
+          box-sizing: border-box !important;
+        }
+        /* Outlook.com "My Day" overlay, side pane, drawers, and panels */
+        html.app-tower-docked .ms-Panel,
+        html.app-tower-docked .ms-Panel-main,
+        html.app-tower-docked .ms-Panel--right,
+        html.app-tower-docked [class*="ms-Panel"],
+        html.app-tower-docked [class*="fui-Drawer"],
+        html.app-tower-docked [class*="fui-OverlayDrawer"],
+        html.app-tower-docked [class*="fui-InlineDrawer"],
+        html.app-tower-docked [class*="sidePane" i],
+        html.app-tower-docked [class*="SidePane" i],
+        html.app-tower-docked [class*="side-pane" i],
+        html.app-tower-docked [class*="myDay" i],
+        html.app-tower-docked [class*="MyDay" i],
+        html.app-tower-docked [class*="FlexPane" i],
+        html.app-tower-docked [class*="flexPane" i],
+        html.app-tower-docked [data-testid*="myday" i],
+        html.app-tower-docked [data-testid*="MyDay" i],
+        html.app-tower-docked [data-testid*="sidePane" i],
+        html.app-tower-docked [data-testid*="SidePane" i],
+        html.app-tower-docked [data-testid*="side-pane" i],
+        html.app-tower-docked [data-app="SidePane"],
+        html.app-tower-docked [data-app="MyDay"],
+        html.app-tower-docked [aria-label*="My Day" i],
+        html.app-tower-docked [aria-label*="My day" i],
+        html.app-tower-docked [aria-label*="Calendar and To Do" i],
+        html.app-tower-docked [aria-label*="To Do" i][role="complementary"],
+        html.app-tower-docked [aria-label*="Calendar" i][role="complementary"],
+        html.app-tower-docked [role="complementary"],
+        html.app-tower-docked #owa-myday-pane,
+        html.app-tower-docked #sidePaneHost,
+        html.app-tower-docked div[id*="sidePane" i],
+        html.app-tower-docked div[id*="myDay" i] {
+          right: ${widthPx} !important;
+        }
       `;
+    }
+
+    const myDaySelectors = [
+      '.ms-Panel-main',
+      '.ms-Panel--right',
+      '.ms-Panel',
+      '[class*="ms-Panel-main"]',
+      '[class*="ms-Panel--right"]',
+      '[class*="ms-Panel"]',
+      '[class*="fui-Drawer"]',
+      '[class*="fui-OverlayDrawer"]',
+      '[class*="fui-InlineDrawer"]',
+      '[class*="sidePane" i]',
+      '[class*="SidePane" i]',
+      '[class*="side-pane" i]',
+      '[class*="myDay" i]',
+      '[class*="MyDay" i]',
+      '[class*="FlexPane" i]',
+      '[class*="flexPane" i]',
+      '[data-testid*="myday" i]',
+      '[data-testid*="MyDay" i]',
+      '[data-testid*="sidePane" i]',
+      '[data-testid*="SidePane" i]',
+      '[data-testid*="side-pane" i]',
+      '[data-app="SidePane"]',
+      '[data-app="MyDay"]',
+      '[aria-label*="My Day" i]',
+      '[aria-label*="My day" i]',
+      '[aria-label*="Calendar and To Do" i]',
+      '[aria-label*="To Do" i][role="complementary"]',
+      '[aria-label*="Calendar" i][role="complementary"]',
+      '#owa-myday-pane',
+      '#sidePaneHost',
+      'div[id*="sidePane" i]',
+      'div[id*="myDay" i]'
+    ].join(', ');
+
+    function adjustOutlookMyDayPanes() {
+      if (!isDockVisible) return;
+      const widthPx = `${currentDockWidth}px`;
+
+      // 1. Selector-based targeting
+      try {
+        const found = document.querySelectorAll(myDaySelectors);
+        found.forEach(el => {
+          if (el.closest('#app-tower-host') || el.id === 'app-tower-host') return;
+          el.style.setProperty('right', widthPx, 'important');
+          el.setAttribute('data-app-tower-adjusted', 'true');
+        });
+      } catch (e) {}
+
+      // 2. Geometry detection for dynamic or hashed Fluent UI v9 drawer/sidepane overlays
+      try {
+        const winWidth = window.innerWidth;
+        const candidates = document.querySelectorAll('body > div, #owa-root div, .ms-Layer, [class*="ms-Layer"], #fluent-default-layer-host, [role="complementary"], aside, [class*="fui-Drawer"]');
+        candidates.forEach(el => {
+          if (el.closest('#app-tower-host') || el.id === 'app-tower-host') return;
+          const rect = el.getBoundingClientRect();
+          // Overlay criteria: Touching right edge, panel width (140px - 85% of screen), height > 200px
+          if (rect.right >= winWidth - 8 && rect.width >= 140 && rect.width < winWidth * 0.85 && rect.height > 200) {
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' || style.position === 'absolute') {
+              el.style.setProperty('right', widthPx, 'important');
+              el.setAttribute('data-app-tower-adjusted', 'true');
+            }
+          }
+        });
+      } catch (e) {}
     }
 
     function reserveDockMargin() {
@@ -88,6 +205,7 @@
       document.documentElement.style.setProperty('margin-right', widthPx, 'important');
       document.documentElement.style.setProperty('width', `calc(100% - ${widthPx})`, 'important');
       document.documentElement.style.setProperty('box-sizing', 'border-box', 'important');
+      adjustOutlookMyDayPanes();
     }
 
     function restoreDockMargin() {
@@ -99,12 +217,43 @@
       }
       document.documentElement.style.removeProperty('width');
       document.documentElement.style.removeProperty('box-sizing');
+      try {
+        document.querySelectorAll('[data-app-tower-adjusted="true"]').forEach(el => {
+          el.style.removeProperty('right');
+          el.removeAttribute('data-app-tower-adjusted');
+        });
+        document.querySelectorAll(myDaySelectors).forEach(el => {
+          el.style.removeProperty('right');
+          el.removeAttribute('data-app-tower-adjusted');
+        });
+      } catch (e) {}
+    }
+
+    // Monitor for dynamically rendered Outlook "My Day" panels/overlays
+    let outlookObserver = null;
+    function setupOutlookObserver() {
+      if (outlookObserver) return;
+      const targetNode = document.body || document.documentElement;
+      if (!targetNode) return;
+      outlookObserver = new MutationObserver(() => {
+        if (isDockVisible) {
+          adjustOutlookMyDayPanes();
+        }
+      });
+      outlookObserver.observe(targetNode, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'hidden', 'aria-hidden']
+      });
     }
 
     // Immediately reserve margin so the dock never floats even during initial load
     reserveDockMargin();
+    setupOutlookObserver();
     if (!document.body) {
       document.addEventListener('DOMContentLoaded', () => {
+        setupOutlookObserver();
         if (isDockVisible) reserveDockMargin();
       });
     }
@@ -1763,7 +1912,7 @@
     });
 
     // 11. Dock Visibility & Toolbar Toggle
-    let isDockVisible = true;
+    // (isDockVisible state is declared at top of initAppTowerDock scope)
 
     function setDockCollapsed(collapsed) {
       isDockVisible = !collapsed;

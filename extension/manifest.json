@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "App Tower Sidebar",
-  "version": "1.9",
+  "version": "1.10",
   "description": "Microsoft Edge style App Tower dock with 1-click borderless Google Keep and Google Messages windows (No iframes, zero 403 errors).",
   "permissions": [
     "storage",
