@@ -988,7 +988,7 @@ export const LiveSimulator: React.FC = () => {
           <main 
             style={{ 
               marginRight: isDockCollapsed ? '0px' : `${dockWidth}px`,
-              transition: 'margin-right 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+              transition: 'margin-right 0.32s cubic-bezier(0.2, 0, 0, 1)'
             }}
             className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950"
           >
@@ -1215,10 +1215,11 @@ export const LiveSimulator: React.FC = () => {
             style={{
               width: `${dockWidth}px`,
               backgroundColor: dockColor,
+              boxShadow: 'none',
               transform: isDockCollapsed ? 'translateX(100%)' : 'translateX(0)',
-              transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), width 0.15s ease, background-color 0.15s ease'
+              transition: 'transform 0.32s cubic-bezier(0.2, 0, 0, 1), width 0.32s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease'
             }}
-            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-[-2px_0_12px_rgba(0,0,0,0.4)]"
+            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-none"
           >
             {/* App Icons (Vertical Stack) */}
             <div 

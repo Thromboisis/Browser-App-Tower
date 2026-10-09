@@ -53,22 +53,93 @@
       (document.head || document.documentElement).appendChild(guardStyle);
     }
 
+    function enforceFixedElementsDockMargin() {
+      if (!document.body || !isDockVisible) return;
+      const widthPx = `${currentDockWidth}px`;
+
+      // Scan direct children of body (covers Outlook #owa-root, Google web apps, single page app shells)
+      const children = document.body.children;
+      for (let i = 0; i < children.length; i++) {
+        const el = children[i];
+        if (el.id === 'app-tower-root' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+        const style = window.getComputedStyle(el);
+        if (style.position === 'fixed' || style.position === 'absolute') {
+          const rightVal = parseFloat(style.right);
+          const widthVal = parseFloat(style.width);
+          if (style.right === '0px' || (rightVal >= 0 && rightVal <= 8) || widthVal >= window.innerWidth - 12) {
+            el.setAttribute('data-app-tower-adjusted', 'true');
+            el.style.setProperty('right', widthPx, 'important');
+            el.style.setProperty('max-width', `calc(100vw - ${widthPx})`, 'important');
+            el.style.setProperty('box-sizing', 'border-box', 'important');
+            el.style.setProperty('transition', 'right 0.32s cubic-bezier(0.2, 0, 0, 1), max-width 0.32s cubic-bezier(0.2, 0, 0, 1)', 'important');
+          }
+        }
+      }
+
+      // Check Wikipedia specific headers and top sticky navigation bars
+      const stickyElements = document.querySelectorAll('.vector-sticky-header, .vector-header-container, #owa-root');
+      stickyElements.forEach(el => {
+        el.setAttribute('data-app-tower-adjusted', 'true');
+        el.style.setProperty('right', widthPx, 'important');
+        el.style.setProperty('max-width', `calc(100vw - ${widthPx})`, 'important');
+        el.style.setProperty('box-sizing', 'border-box', 'important');
+        el.style.setProperty('transition', 'right 0.32s cubic-bezier(0.2, 0, 0, 1), max-width 0.32s cubic-bezier(0.2, 0, 0, 1)', 'important');
+      });
+    }
+
+    function restoreFixedElementsDockMargin() {
+      const adjusted = document.querySelectorAll('[data-app-tower-adjusted="true"]');
+      adjusted.forEach(el => {
+        el.removeAttribute('data-app-tower-adjusted');
+        el.style.removeProperty('right');
+        el.style.removeProperty('max-width');
+        el.style.removeProperty('transition');
+      });
+    }
+
     function reserveDockMargin() {
       const widthPx = `${currentDockWidth}px`;
       document.documentElement.classList.add('app-tower-docked');
       if (guardStyle) {
         guardStyle.textContent = `
+          html {
+            transition: width 0.32s cubic-bezier(0.2, 0, 0, 1), margin-right 0.32s cubic-bezier(0.2, 0, 0, 1) !important;
+          }
+          body {
+            transition: width 0.32s cubic-bezier(0.2, 0, 0, 1), margin-right 0.32s cubic-bezier(0.2, 0, 0, 1) !important;
+          }
           html.app-tower-docked {
             margin-right: ${widthPx} !important;
             width: calc(100vw - ${widthPx}) !important;
             max-width: calc(100vw - ${widthPx}) !important;
             box-sizing: border-box !important;
+            overflow-x: hidden !important;
           }
           html.app-tower-docked body {
             margin-right: ${widthPx} !important;
             width: calc(100vw - ${widthPx}) !important;
             max-width: calc(100vw - ${widthPx}) !important;
             box-sizing: border-box !important;
+            overflow-x: hidden !important;
+          }
+          /* Outlook.com SPA roots & full-viewport containers */
+          html.app-tower-docked #owa-root,
+          html.app-tower-docked #app,
+          html.app-tower-docked #root,
+          html.app-tower-docked [id^="owa"],
+          html.app-tower-docked div[data-testid="app-root"],
+          html.app-tower-docked body > div:not(#app-tower-root) {
+            max-width: calc(100vw - ${widthPx}) !important;
+          }
+          /* Wikipedia headers, sticky bars, content wrappers */
+          html.app-tower-docked .vector-sticky-header,
+          html.app-tower-docked .vector-header-container,
+          html.app-tower-docked .mw-page-container,
+          html.app-tower-docked #content,
+          html.app-tower-docked header,
+          html.app-tower-docked nav {
+            max-width: calc(100vw - ${widthPx}) !important;
+            right: ${widthPx} !important;
           }
         `;
       }
@@ -82,6 +153,7 @@
         document.body.style.setProperty('max-width', `calc(100vw - ${widthPx})`, 'important');
         document.body.style.setProperty('box-sizing', 'border-box', 'important');
       }
+      enforceFixedElementsDockMargin();
     }
 
     function restoreDockMargin() {
@@ -101,14 +173,33 @@
         document.body.style.removeProperty('width');
         document.body.style.removeProperty('max-width');
       }
+      restoreFixedElementsDockMargin();
+    }
+
+    // Setup mutation observer for SPAs like Outlook, so dynamically rendered fullbleed roots never float
+    let bodyObserver = null;
+    function setupBodyObserver() {
+      if (!document.body || bodyObserver) return;
+      bodyObserver = new MutationObserver(() => {
+        if (isDockVisible) {
+          enforceFixedElementsDockMargin();
+        }
+      });
+      bodyObserver.observe(document.body, { childList: true, subtree: false });
+      window.addEventListener('resize', () => {
+        if (isDockVisible) enforceFixedElementsDockMargin();
+      });
     }
 
     // Immediately reserve margin so the dock never floats even during initial load
     reserveDockMargin();
     if (!document.body) {
       document.addEventListener('DOMContentLoaded', () => {
+        setupBodyObserver();
         if (isDockVisible) reserveDockMargin();
       });
+    } else {
+      setupBodyObserver();
     }
 
     function updateDockStyles() {
@@ -172,8 +263,9 @@
         z-index: 2147483645 !important;
         box-sizing: border-box !important;
         user-select: none !important;
-        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.4) !important;
-        transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+        box-shadow: none !important;
+        will-change: transform;
+        transition: transform 0.32s cubic-bezier(0.2, 0, 0, 1), opacity 0.28s cubic-bezier(0.2, 0, 0, 1) !important;
       }
 
       .app-tower-dock.collapsed {
