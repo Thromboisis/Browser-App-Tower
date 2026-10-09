@@ -730,9 +730,9 @@ chrome.windows.onBoundsChanged.addListener(async (win) => {
   if (!win || !win.id) return;
   if (win.state && win.state !== 'normal') return;
 
-  // Prevent transient creation events from overwriting the user's saved position
+  // Prevent transient creation/cascading events from overwriting the user's saved position
   const createTime = windowCreationTimes.get(win.id) || 0;
-  if (Date.now() - createTime < 350) {
+  if (Date.now() - createTime < 1200) {
     return;
   }
 
@@ -740,12 +740,12 @@ chrome.windows.onBoundsChanged.addListener(async (win) => {
     // In Chromium, win object passed to onBoundsChanged may have incomplete properties.
     // Use chrome.windows.get to retrieve authoritative coordinates and dimensions.
     const fullWin = await chrome.windows.get(win.id);
-    if (!fullWin || fullWin.state !== 'normal') return;
+    if (!fullWin || (fullWin.state && fullWin.state !== 'normal')) return;
 
     const tracker = await getStoredTracker();
     let matchedAppId = null;
     for (const [appId, trackedWinId] of Object.entries(tracker)) {
-      if (trackedWinId === fullWin.id) {
+      if (Number(trackedWinId) === Number(fullWin.id)) {
         matchedAppId = appId;
         break;
       }
@@ -796,10 +796,10 @@ chrome.windows.onFocusChanged.addListener(async (focusedWinId) => {
     for (const [appId, winId] of Object.entries(tracker)) {
       if (winId && companionWindowIds.has(winId)) {
         const createTime = windowCreationTimes.get(winId) || 0;
-        if (Date.now() - createTime < 350) continue;
+        if (Date.now() - createTime < 1200) continue;
 
         const win = await chrome.windows.get(winId).catch(() => null);
-        if (win && win.state === 'normal' && typeof win.left === 'number' && typeof win.top === 'number') {
+        if (win && (!win.state || win.state === 'normal') && typeof win.left === 'number' && typeof win.top === 'number') {
           await saveAppBounds(appId, {
             left: win.left,
             top: win.top,

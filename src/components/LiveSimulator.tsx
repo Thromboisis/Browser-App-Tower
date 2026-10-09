@@ -463,7 +463,8 @@ export const LiveSimulator: React.FC = () => {
         const deltaX = dragStartRef.current.startX - e.clientX;
         const deltaY = e.clientY - dragStartRef.current.startY;
 
-        const newRight = Math.max(44, Math.min(800, dragStartRef.current.initialRight + deltaX));
+        const minRight = isDockCollapsed ? 12 : dockWidth;
+        const newRight = Math.max(minRight, Math.min(800, dragStartRef.current.initialRight + deltaX));
         const newTop = Math.max(0, Math.min(400, dragStartRef.current.initialTop + deltaY));
 
         setSavedBounds(prev => {
@@ -977,20 +978,16 @@ export const LiveSimulator: React.FC = () => {
           </div>
         </div>
 
-        {/* Viewport Area: Webpage + Firmly Docked 44px Rail */}
+        {/* Viewport Area: Webpage + Firmly Docked Rail (Flex layout, strictly non-floating) */}
         <div 
           onClick={() => {
             if (contextMenu) setContextMenu(null);
           }}
           className="relative w-full h-[620px] bg-slate-950 flex overflow-hidden select-none"
         >
-          {/* Main Web Page Content: has dynamic right margin reserved when dock is expanded */}
+          {/* Main Web Page Content */}
           <main 
-            style={{ 
-              marginRight: isDockCollapsed ? '0px' : `${dockWidth}px`,
-              transition: 'margin-right 0.32s cubic-bezier(0.2, 0, 0, 1)'
-            }}
-            className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950"
+            className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950 min-w-0"
           >
             {activeWebsite === 'newtab' ? (
               /* Active New Tab Experience with Wallpapers & Draggable Applets */
@@ -1210,26 +1207,33 @@ export const LiveSimulator: React.FC = () => {
             )}
           </main>
 
-          {/* FIRMLY DOCKED SIDEBAR RAIL (On right edge with dynamic width & color) */}
+          {/* FIRMLY DOCKED SIDEBAR RAIL (Real flex column on right edge, zero floating) */}
           <aside
             style={{
-              width: `${dockWidth}px`,
+              width: isDockCollapsed ? '0px' : `${dockWidth}px`,
+              minWidth: isDockCollapsed ? '0px' : `${dockWidth}px`,
               backgroundColor: dockColor,
               boxShadow: 'none',
-              transform: isDockCollapsed ? 'translateX(100%)' : 'translateX(0)',
-              transition: 'transform 0.32s cubic-bezier(0.2, 0, 0, 1), width 0.32s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease'
+              filter: 'none',
+              transition: 'width 0.35s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease'
             }}
-            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-none"
+            className="h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-none overflow-hidden shrink-0"
           >
             {/* App Icons (Vertical Stack) */}
             <div 
+              style={{
+                width: `${dockWidth}px`,
+                opacity: isDockCollapsed ? 0 : 1,
+                transform: isDockCollapsed ? 'translateX(16px)' : 'translateX(0)',
+                transition: 'opacity 0.25s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
               onDragLeave={(e) => {
                 const related = e.relatedTarget as Node | null;
                 if (!related || !e.currentTarget.contains(related)) {
                   setDragOverAppId(null);
                 }
               }}
-              className="flex flex-col items-center gap-2 w-full"
+              className="flex flex-col items-center gap-2"
             >
               {apps.map((app, index) => {
                 const isActive = activeAppId === app.id;
