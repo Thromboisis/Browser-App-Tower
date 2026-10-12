@@ -66,21 +66,17 @@
 
     function applyGuardStyles() {
       if (!guardStyle) return;
+      if (!isDockVisible) {
+        guardStyle.textContent = '';
+        return;
+      }
       const widthPx = `${currentDockWidth}px`;
       guardStyle.textContent = `
-        html {
-          transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease !important;
-        }
         html.app-tower-docked {
           margin-right: ${widthPx} !important;
           box-sizing: border-box !important;
           background-color: ${currentDockColor} !important;
-        }
-        html:not(.app-tower-docked) {
-          margin-right: 0px !important;
-        }
-        html body {
-          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease !important;
         }
         html.app-tower-docked body {
           box-sizing: border-box !important;
@@ -88,10 +84,6 @@
         }
         /* Anchor Outlook Web and full-bleed SPA roots at left: 0 so no content is pushed off-screen */
         /* and stop flush at right: ${widthPx} so sidebar NEVER hovers over main page content */
-        html #owa-root,
-        html [id="owa-root"] {
-          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        }
         html.app-tower-docked #owa-root,
         html.app-tower-docked [id="owa-root"] {
           left: 0 !important;
@@ -99,12 +91,7 @@
           width: calc(100vw - ${widthPx}) !important;
           max-width: calc(100vw - ${widthPx}) !important;
           box-sizing: border-box !important;
-        }
-        html:not(.app-tower-docked) #owa-root,
-        html:not(.app-tower-docked) [id="owa-root"] {
-          right: 0px !important;
-          width: 100vw !important;
-          max-width: 100vw !important;
+          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
         [data-app-tower-adjusted="true"] {
           transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -117,26 +104,7 @@
       const widthPx = `${currentDockWidth}px`;
       const calcWidth = `calc(100vw - ${widthPx})`;
 
-      // Adjust positioned body if host page is a full-viewport SPA (e.g. Outlook)
-      if (document.body) {
-        try {
-          const bodyStyle = window.getComputedStyle(document.body);
-          if (bodyStyle.position === 'absolute' || bodyStyle.position === 'fixed') {
-            if (!document.body.hasAttribute('data-app-tower-body-adj')) {
-              document.body.dataset.appTowerOrigRight = document.body.style.right || '';
-              document.body.dataset.appTowerOrigLeft = document.body.style.left || '';
-              document.body.dataset.appTowerOrigWidth = document.body.style.width || '';
-              document.body.setAttribute('data-app-tower-body-adj', 'true');
-            }
-            document.body.style.setProperty('left', '0px', 'important');
-            document.body.style.setProperty('right', widthPx, 'important');
-            document.body.style.setProperty('width', calcWidth, 'important');
-            document.body.style.setProperty('max-width', calcWidth, 'important');
-          }
-        } catch (e) {}
-      }
-
-      // Explicitly adjust Outlook Web App #owa-root if present
+      // Only adjust full-bleed SPA root containers if Outlook Web #owa-root is present
       const owaRoot = document.getElementById('owa-root');
       if (owaRoot) {
         try {
@@ -151,6 +119,24 @@
           owaRoot.style.setProperty('width', calcWidth, 'important');
           owaRoot.style.setProperty('max-width', calcWidth, 'important');
         } catch (e) {}
+
+        if (document.body) {
+          try {
+            const bodyStyle = window.getComputedStyle(document.body);
+            if (bodyStyle.position === 'absolute' || bodyStyle.position === 'fixed') {
+              if (!document.body.hasAttribute('data-app-tower-body-adj')) {
+                document.body.dataset.appTowerOrigRight = document.body.style.right || '';
+                document.body.dataset.appTowerOrigLeft = document.body.style.left || '';
+                document.body.dataset.appTowerOrigWidth = document.body.style.width || '';
+                document.body.setAttribute('data-app-tower-body-adj', 'true');
+              }
+              document.body.style.setProperty('left', '0px', 'important');
+              document.body.style.setProperty('right', widthPx, 'important');
+              document.body.style.setProperty('width', calcWidth, 'important');
+              document.body.style.setProperty('max-width', calcWidth, 'important');
+            }
+          } catch (e) {}
+        }
       }
     }
 
@@ -193,30 +179,44 @@
       if (!isDockVisible) return;
       const widthPx = `${currentDockWidth}px`;
       const winWidth = window.innerWidth;
+      const winHeight = window.innerHeight;
 
-      // Select potential candidate containers
+      // Select potential candidate right-anchored full-height drawers
       const candidates = document.querySelectorAll(
-        'body > *, aside, [role="region"], [role="complementary"], [role="dialog"], [class*="drawer" i], [class*="panel" i], [class*="sidebar" i], [class*="pane" i]'
+        'aside, [role="complementary"], [role="dialog"], [class*="drawer" i], [class*="panel" i], [class*="sidebar" i]'
       );
 
       candidates.forEach(el => {
         if (!el || el.id === 'app-tower-root' || el.closest('#app-tower-root')) return;
 
+        // STRICT EXCLUSION: Never touch calendar, scheduling, grid, table, form, date-picker or content components
+        if (
+          el.closest(
+            'table, tbody, tr, td, th, [role="grid"], [role="gridcell"], [role="row"], [role="table"], [class*="calendar" i], [class*="schedule" i], [class*="picker" i], [class*="fc-" i], [class*="day" i], [id*="calendar" i], [id*="schedule" i], form, input, select, textarea'
+          ) ||
+          el.matches(
+            'table, tbody, tr, td, th, [role="grid"], [role="gridcell"], [role="row"], [role="table"], [class*="calendar" i], [class*="schedule" i], [class*="picker" i], [class*="fc-" i], [class*="day" i], [id*="calendar" i], [id*="schedule" i]'
+          )
+        ) {
+          return;
+        }
+
         try {
           const style = window.getComputedStyle(el);
-          if (style.position !== 'fixed' && style.position !== 'absolute') return;
+          // Only true fixed-position full-height side drawers (like Outlook My Day). Never arbitrary layout elements.
+          if (style.position !== 'fixed') return;
           if (style.display === 'none' || style.visibility === 'hidden') return;
 
           const rect = el.getBoundingClientRect();
-          // Universal criteria for a right-anchored side overlay:
+          // Universal criteria for a right-anchored side overlay drawer:
           // 1. Touches or is flush with the right screen edge (within 8px)
           const touchesRight = rect.right >= winWidth - 8;
-          // 2. Is a drawer/pane: between 120px and 75% of screen width (never full-screen containers or tiny icons)
-          const isSidePanel = rect.width >= 120 && rect.width < winWidth * 0.75;
-          // 3. Significant vertical height (not a notification pill or floating tooltip)
-          const isTall = rect.height >= 180;
+          // 2. Is a drawer: between 140px and 60% of screen width (never full-screen containers or tiny icons)
+          const isSidePanel = rect.width >= 140 && rect.width < winWidth * 0.6;
+          // 3. Spans significant vertical height (starts near top and spans >60% of viewport)
+          const isTallDrawer = rect.top <= 120 && rect.height >= winHeight * 0.6;
 
-          if (touchesRight && isSidePanel && isTall) {
+          if (touchesRight && isSidePanel && isTallDrawer) {
             if (el.style.right !== widthPx) {
               if (!el.hasAttribute('data-app-tower-adjusted')) {
                 el.dataset.appTowerOrigRight = el.style.right || '';
@@ -306,6 +306,9 @@
           document.documentElement.style.removeProperty('box-sizing');
           restoreBodyAndRootAdjustment();
           restoreUniversalOverlayGuard();
+          if (guardStyle) {
+            guardStyle.textContent = '';
+          }
         }
       }, 360);
     }

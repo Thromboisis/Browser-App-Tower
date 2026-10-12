@@ -99,12 +99,13 @@ export const LiveSimulator: React.FC = () => {
     portal: false,
     dashboard: false,
     outlook: false,
+    scheduler: false,
     newtab: false,
   });
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [useLiveIframe, setUseLiveIframe] = useState(false);
-  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab' | 'outlook'>('doc');
+  const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab' | 'outlook' | 'scheduler'>('doc');
   const [isMyDayOpen, setIsMyDayOpen] = useState(true);
 
   const isDockCollapsed = !!tabCollapsedStates[activeWebsite];
@@ -933,6 +934,7 @@ export const LiveSimulator: React.FC = () => {
               {activeWebsite === 'portal' && 'Internal Developer Hub & API Docs'}
               {activeWebsite === 'dashboard' && 'Analytics & Operations Dashboard'}
               {activeWebsite === 'outlook' && 'Outlook Mail & My Day (outlook.live.com)'}
+              {activeWebsite === 'scheduler' && 'Pavillio - Staff Scheduling & Visit Calendar'}
               {activeWebsite === 'newtab' && 'New Tab (App Tower Override)'}
             </span>
           </div>
@@ -945,6 +947,7 @@ export const LiveSimulator: React.FC = () => {
                 {activeWebsite === 'portal' && 'https://portal.internal.company.net/engineering/specs'}
                 {activeWebsite === 'dashboard' && 'https://analytics.workspace.google.com/live/metrics'}
                 {activeWebsite === 'outlook' && 'https://outlook.live.com/mail/0/'}
+                {activeWebsite === 'scheduler' && 'https://app.pavillio.com/scheduler/calendar'}
                 {activeWebsite === 'newtab' && 'chrome://newtab'}
               </span>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-2" />
@@ -986,6 +989,14 @@ export const LiveSimulator: React.FC = () => {
               >
                 <span>Outlook</span>
                 <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.outlook ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
+              </button>
+              <button
+                onClick={() => setActiveWebsite('scheduler')}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'scheduler' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`Pavillio Scheduler Tab - Sidebar: ${!tabCollapsedStates.scheduler ? 'Visible' : 'Collapsed'}`}
+              >
+                <span>Scheduler</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.scheduler ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
               <button
                 onClick={() => setActiveWebsite('newtab')}
@@ -1357,6 +1368,102 @@ export const LiveSimulator: React.FC = () => {
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+              ) : activeWebsite === 'scheduler' ? (
+                /* Pavillio Healthcare Scheduling & Calendar Simulation */
+                <div className="relative w-full h-full flex flex-col bg-[#0f172a] select-none overflow-y-auto">
+                  {/* Pavillio App Header */}
+                  <div className="bg-[#1e293b] border-b border-slate-700/80 px-4 py-3 flex items-center justify-between gap-4 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 font-bold text-xs">
+                        P
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-sm font-bold text-white tracking-tight">Pavillio Scheduling & Visits</h2>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                            EVV & EHR
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">Weekly Caregiver Calendar & Shift Dashboard</p>
+                      </div>
+                    </div>
+
+                    {/* Filter controls styled as standard Bootstrap input-groups */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden text-[11px]">
+                        <span className="px-2.5 py-1 text-slate-400 bg-slate-800/80 border-r border-slate-700 font-medium">Week:</span>
+                        <span className="px-3 py-1 text-slate-200 font-mono">Oct 12 - Oct 18, 2026</span>
+                      </div>
+
+                      <button className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-medium text-xs shadow-sm transition">
+                        + Add Shift
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Verification Banner */}
+                  <div className="p-4 pb-2">
+                    <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-200 text-xs flex items-start gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-semibold text-emerald-300">Clean Isolation Verified — Calendar Boxes Restored</div>
+                        <p className="text-[11px] text-emerald-100/90 mt-0.5 leading-relaxed">
+                          All extension UI CSS is now strictly encapsulated inside Shadow DOM and removed from host-page content scripts. 
+                          Pavillio's calendar boxes, input groups, date pickers, and rightmost weekend day columns render with 100% native styling and zero CSS collision, both when App Tower is open and when collapsed!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 7-Day Calendar Grid */}
+                  <div className="flex-1 p-4 pt-2 flex flex-col min-h-0">
+                    <div className="grid grid-cols-7 gap-2 flex-1">
+                      {[
+                        { day: 'Mon', date: 'Oct 12', shifts: [{ time: '8:00 AM - 1:00 PM', client: 'Alice M. (PCA)', color: 'border-blue-500/50 bg-blue-950/40 text-blue-200' }, { time: '2:00 PM - 6:00 PM', client: 'Robert D. (Respite)', color: 'border-teal-500/50 bg-teal-950/40 text-teal-200' }] },
+                        { day: 'Tue', date: 'Oct 13', shifts: [{ time: '9:00 AM - 3:00 PM', client: 'Helen W. (Homemaker)', color: 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200' }] },
+                        { day: 'Wed', date: 'Oct 14', shifts: [{ time: '8:00 AM - 12:30 PM', client: 'Alice M. (PCA)', color: 'border-blue-500/50 bg-blue-950/40 text-blue-200' }, { time: '1:30 PM - 5:30 PM', client: 'David K. (Nursing)', color: 'border-amber-500/50 bg-amber-950/40 text-amber-200' }] },
+                        { day: 'Thu', date: 'Oct 15', shifts: [{ time: '10:00 AM - 4:00 PM', client: 'Helen W. (Homemaker)', color: 'border-indigo-500/50 bg-indigo-950/40 text-indigo-200' }] },
+                        { day: 'Fri', date: 'Oct 16', shifts: [{ time: '8:00 AM - 2:00 PM', client: 'Alice M. (PCA)', color: 'border-blue-500/50 bg-blue-950/40 text-blue-200' }, { time: '3:00 PM - 7:00 PM', client: 'Robert D. (Respite)', color: 'border-teal-500/50 bg-teal-950/40 text-teal-200' }] },
+                        { day: 'Sat', date: 'Oct 17', shifts: [{ time: '10:00 AM - 2:00 PM', client: 'Weekend On-Call', color: 'border-purple-500/50 bg-purple-950/40 text-purple-200' }] },
+                        { day: 'Sun', date: 'Oct 18', shifts: [{ time: '11:00 AM - 3:00 PM', client: 'Weekend Visit (PCA)', color: 'border-teal-500/50 bg-teal-950/40 text-teal-200' }] },
+                      ].map((col, idx) => (
+                        <div
+                          key={col.day}
+                          className="flex flex-col bg-slate-900/90 rounded-xl border border-slate-800 p-2 text-xs shadow-sm"
+                        >
+                          {/* Column Header */}
+                          <div className="pb-2 mb-2 border-b border-slate-800 flex items-center justify-between">
+                            <span className="font-bold text-slate-200 text-xs">{col.day}</span>
+                            <span className="text-[11px] text-slate-400 font-mono">{col.date}</span>
+                          </div>
+
+                          {/* Shift Blocks inside Day Box */}
+                          <div className="space-y-2 flex-1">
+                            {col.shifts.map((shift, sIdx) => (
+                              <div
+                                key={sIdx}
+                                className={`p-2 rounded-lg border text-[11px] leading-snug space-y-0.5 ${shift.color}`}
+                              >
+                                <div className="font-semibold">{shift.client}</div>
+                                <div className="text-[10px] opacity-80 font-mono">{shift.time}</div>
+                              </div>
+                            ))}
+                            {col.shifts.length === 1 && (
+                              <div className="h-16 rounded-lg border border-dashed border-slate-800/80 flex items-center justify-center text-slate-600 text-[10px]">
+                                Open Slot
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Footer Tag */}
+                          <div className="pt-2 mt-auto text-[10px] text-slate-500 text-right">
+                            {idx === 6 ? 'Rightmost Column (Flush)' : `${col.shifts.length} Visits`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
