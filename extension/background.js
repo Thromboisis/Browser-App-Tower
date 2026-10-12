@@ -849,32 +849,15 @@ async function notifyDockState(appId, isOpen) {
 }
 
 // Toggle dock collapsed state when clicking extension action button in toolbar
+// Made tab-specific: toggling in one tab only affects that active tab
 chrome.action.onClicked.addListener(async (tab) => {
-  const data = await chrome.storage.local.get(['dock_collapsed']);
-  const newState = !data.dock_collapsed;
-  await chrome.storage.local.set({ dock_collapsed: newState });
-
-  // If invoked on an active tab, message it immediately
   if (tab && tab.id) {
     try {
       await chrome.tabs.sendMessage(tab.id, {
-        action: 'toggle_dock',
-        collapsed: newState
+        action: 'toggle_dock'
       });
-      return;
     } catch (e) {
       // Tab might be on a page where content scripts are restricted (e.g. Chrome Web Store or chrome://)
-    }
-  }
-
-  // Broadcast to all valid tabs
-  const tabs = await chrome.tabs.query({});
-  for (const t of tabs) {
-    if (t.id && t.url && !t.url.startsWith('chrome://')) {
-      chrome.tabs.sendMessage(t.id, {
-        action: 'toggle_dock',
-        collapsed: newState
-      }).catch(() => {});
     }
   }
 });

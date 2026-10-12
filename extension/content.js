@@ -39,7 +39,12 @@
     }
 
     // 1. Reserve dock margin on right edge of page content (Strictly Non-Floating)
-    let isDockVisible = true;
+    // Independent tab-specific collapse state (stored in sessionStorage per browser tab)
+    let isTabCollapsed = false;
+    try {
+      isTabCollapsed = sessionStorage.getItem('app_tower_tab_collapsed') === 'true';
+    } catch (e) {}
+    let isDockVisible = !isTabCollapsed;
     let currentDockWidth = 44;
     let currentDockColor = '#12141a';
     let newTabOverrideEnabled = false;
@@ -72,8 +77,96 @@
         }
         html.app-tower-docked body {
           box-sizing: border-box !important;
+          max-width: calc(100vw - ${widthPx}) !important;
+        }
+        /* Anchor Outlook Web and full-bleed SPA roots at left: 0 so no content is pushed off-screen */
+        /* and stop flush at right: ${widthPx} so sidebar NEVER hovers over main page content */
+        html.app-tower-docked #owa-root,
+        html.app-tower-docked [id="owa-root"] {
+          left: 0 !important;
+          right: ${widthPx} !important;
+          width: calc(100vw - ${widthPx}) !important;
+          max-width: calc(100vw - ${widthPx}) !important;
+          box-sizing: border-box !important;
         }
       `;
+    }
+
+    function applyBodyAndRootAdjustment() {
+      if (!isDockVisible) return;
+      const widthPx = `${currentDockWidth}px`;
+      const calcWidth = `calc(100vw - ${widthPx})`;
+
+      // Adjust positioned body if host page is a full-viewport SPA (e.g. Outlook)
+      if (document.body) {
+        try {
+          const bodyStyle = window.getComputedStyle(document.body);
+          if (bodyStyle.position === 'absolute' || bodyStyle.position === 'fixed') {
+            if (!document.body.hasAttribute('data-app-tower-body-adj')) {
+              document.body.dataset.appTowerOrigRight = document.body.style.right || '';
+              document.body.dataset.appTowerOrigLeft = document.body.style.left || '';
+              document.body.dataset.appTowerOrigWidth = document.body.style.width || '';
+              document.body.setAttribute('data-app-tower-body-adj', 'true');
+            }
+            document.body.style.setProperty('left', '0px', 'important');
+            document.body.style.setProperty('right', widthPx, 'important');
+            document.body.style.setProperty('width', calcWidth, 'important');
+            document.body.style.setProperty('max-width', calcWidth, 'important');
+          }
+        } catch (e) {}
+      }
+
+      // Explicitly adjust Outlook Web App #owa-root if present
+      const owaRoot = document.getElementById('owa-root');
+      if (owaRoot) {
+        try {
+          if (!owaRoot.hasAttribute('data-app-tower-root-adj')) {
+            owaRoot.dataset.appTowerOrigRight = owaRoot.style.right || '';
+            owaRoot.dataset.appTowerOrigLeft = owaRoot.style.left || '';
+            owaRoot.dataset.appTowerOrigWidth = owaRoot.style.width || '';
+            owaRoot.setAttribute('data-app-tower-root-adj', 'true');
+          }
+          owaRoot.style.setProperty('left', '0px', 'important');
+          owaRoot.style.setProperty('right', widthPx, 'important');
+          owaRoot.style.setProperty('width', calcWidth, 'important');
+          owaRoot.style.setProperty('max-width', calcWidth, 'important');
+        } catch (e) {}
+      }
+    }
+
+    function restoreBodyAndRootAdjustment() {
+      if (document.body && document.body.hasAttribute('data-app-tower-body-adj')) {
+        try {
+          const origR = document.body.dataset.appTowerOrigRight;
+          const origL = document.body.dataset.appTowerOrigLeft;
+          const origW = document.body.dataset.appTowerOrigWidth;
+          if (origR) document.body.style.right = origR; else document.body.style.removeProperty('right');
+          if (origL) document.body.style.left = origL; else document.body.style.removeProperty('left');
+          if (origW) document.body.style.width = origW; else document.body.style.removeProperty('width');
+          document.body.style.removeProperty('max-width');
+          document.body.removeAttribute('data-app-tower-body-adj');
+          delete document.body.dataset.appTowerOrigRight;
+          delete document.body.dataset.appTowerOrigLeft;
+          delete document.body.dataset.appTowerOrigWidth;
+        } catch (e) {}
+      }
+
+      const owaRoot = document.getElementById('owa-root');
+      if (owaRoot && owaRoot.hasAttribute('data-app-tower-root-adj')) {
+        try {
+          const origR = owaRoot.dataset.appTowerOrigRight;
+          const origL = owaRoot.dataset.appTowerOrigLeft;
+          const origW = owaRoot.dataset.appTowerOrigWidth;
+          if (origR) owaRoot.style.right = origR; else owaRoot.style.removeProperty('right');
+          if (origL) owaRoot.style.left = origL; else owaRoot.style.removeProperty('left');
+          if (origW) owaRoot.style.width = origW; else owaRoot.style.removeProperty('width');
+          owaRoot.style.removeProperty('max-width');
+          owaRoot.removeAttribute('data-app-tower-root-adj');
+          delete owaRoot.dataset.appTowerOrigRight;
+          delete owaRoot.dataset.appTowerOrigLeft;
+          delete owaRoot.dataset.appTowerOrigWidth;
+        } catch (e) {}
+      }
     }
 
     function applyUniversalOverlayGuard() {
@@ -142,6 +235,7 @@
       document.documentElement.style.setProperty('margin-right', widthPx, 'important');
       document.documentElement.style.removeProperty('width');
       document.documentElement.style.setProperty('box-sizing', 'border-box', 'important');
+      applyBodyAndRootAdjustment();
       applyUniversalOverlayGuard();
     }
 
@@ -154,6 +248,7 @@
       }
       document.documentElement.style.removeProperty('width');
       document.documentElement.style.removeProperty('box-sizing');
+      restoreBodyAndRootAdjustment();
       restoreUniversalOverlayGuard();
     }
 
@@ -168,6 +263,7 @@
         if (!isDockVisible) return;
         if (observerFrame) cancelAnimationFrame(observerFrame);
         observerFrame = requestAnimationFrame(() => {
+          applyBodyAndRootAdjustment();
           applyUniversalOverlayGuard();
         });
       });
@@ -178,7 +274,9 @@
     }
 
     // Immediately reserve margin so the dock never floats even during initial load
-    reserveDockMargin();
+    if (isDockVisible) {
+      reserveDockMargin();
+    }
     setupUniversalOverlayObserver();
     if (!document.body) {
       document.addEventListener('DOMContentLoaded', () => {
@@ -1845,6 +1943,9 @@
 
     function setDockCollapsed(collapsed) {
       isDockVisible = !collapsed;
+      try {
+        sessionStorage.setItem('app_tower_tab_collapsed', collapsed ? 'true' : 'false');
+      } catch (e) {}
       if (collapsed) {
         dock.classList.add('collapsed');
         closeContextMenu();
@@ -1861,7 +1962,6 @@
       if (message.action === 'toggle_dock') {
         const nextCollapsed = typeof message.collapsed === 'boolean' ? message.collapsed : isDockVisible;
         setDockCollapsed(nextCollapsed);
-        chrome.storage.local.set({ dock_collapsed: nextCollapsed });
         sendResponse({ visible: isDockVisible });
         return true;
       }
@@ -1890,7 +1990,7 @@
     });
 
     // 13. Initialize on Load
-    chrome.storage.local.get(['dock_apps', 'app_favicons', 'dock_collapsed', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
+    chrome.storage.local.get(['dock_apps', 'app_favicons', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
       if (typeof data.dock_width === 'number') {
         currentDockWidth = data.dock_width;
       }
@@ -1910,10 +2010,11 @@
       }
       renderAppButtons();
 
-      if (data.dock_collapsed) {
-        setDockCollapsed(true);
-      } else {
+      if (isDockVisible) {
         reserveDockMargin();
+      } else {
+        dock.classList.add('collapsed');
+        restoreDockMargin();
       }
 
       chrome.runtime.sendMessage({ action: 'get_companion_states' }, (states) => {
@@ -1923,7 +2024,8 @@
       });
     });
 
-    // Listen for cross-tab storage changes (e.g., app reordering, apps added/edited, dock toggle, width/color changes)
+    // Listen for cross-tab storage changes (e.g., app reordering, apps added/edited, width/color changes)
+    // Collapse state is excluded so each tab maintains its own independent collapse state
     chrome.storage.onChanged.addListener((changes, areaName) => {
       if (areaName === 'local') {
         if (changes.dock_apps && Array.isArray(changes.dock_apps.newValue)) {
@@ -1933,9 +2035,6 @@
         if (changes.app_favicons && changes.app_favicons.newValue) {
           cachedFavicons = changes.app_favicons.newValue;
           renderAppButtons();
-        }
-        if (changes.dock_collapsed && typeof changes.dock_collapsed.newValue === 'boolean') {
-          setDockCollapsed(changes.dock_collapsed.newValue);
         }
         if (changes.dock_width && typeof changes.dock_width.newValue === 'number') {
           currentDockWidth = changes.dock_width.newValue;

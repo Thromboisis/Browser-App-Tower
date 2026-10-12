@@ -93,12 +93,21 @@ export const LiveSimulator: React.FC = () => {
   });
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(false);
-  const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+  // Independent tab-specific collapse states (each browser tab manages its own collapse state)
+  const [tabCollapsedStates, setTabCollapsedStates] = useState<Record<string, boolean>>({
+    doc: false,
+    portal: false,
+    dashboard: false,
+    outlook: false,
+    newtab: false,
+  });
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
   const [useLiveIframe, setUseLiveIframe] = useState(false);
   const [activeWebsite, setActiveWebsite] = useState<'doc' | 'portal' | 'dashboard' | 'newtab' | 'outlook'>('doc');
   const [isMyDayOpen, setIsMyDayOpen] = useState(true);
+
+  const isDockCollapsed = !!tabCollapsedStates[activeWebsite];
 
   // Per-App saved window geometry (size & location)
   const [savedBounds, setSavedBounds] = useState<Record<string, WindowBounds>>(() => {
@@ -776,10 +785,17 @@ export const LiveSimulator: React.FC = () => {
   };
 
   const toggleDockFromToolbar = () => {
-    setIsDockCollapsed(prev => {
-      const next = !prev;
-      showNotification(next ? 'Dock collapsed' : 'Dock expanded');
-      return next;
+    setTabCollapsedStates(prev => {
+      const next = !prev[activeWebsite];
+      showNotification(
+        next 
+          ? `Dock collapsed on ${activeWebsite.toUpperCase()} tab (independent tab state)` 
+          : `Dock expanded on ${activeWebsite.toUpperCase()} tab`
+      );
+      return {
+        ...prev,
+        [activeWebsite]: next
+      };
     });
   };
 
@@ -941,34 +957,44 @@ export const LiveSimulator: React.FC = () => {
             <div className="flex items-center bg-slate-950/70 p-0.5 rounded-lg border border-slate-800 text-[10px]">
               <button
                 onClick={() => setActiveWebsite('doc')}
-                className={`px-2 py-0.5 rounded ${activeWebsite === 'doc' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'doc' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`Doc Tab - Sidebar: ${!tabCollapsedStates.doc ? 'Visible' : 'Collapsed'}`}
               >
-                Doc
+                <span>Doc</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.doc ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
               <button
                 onClick={() => setActiveWebsite('portal')}
-                className={`px-2 py-0.5 rounded ${activeWebsite === 'portal' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'portal' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`Portal Tab - Sidebar: ${!tabCollapsedStates.portal ? 'Visible' : 'Collapsed'}`}
               >
-                Portal
+                <span>Portal</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.portal ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
               <button
                 onClick={() => setActiveWebsite('dashboard')}
-                className={`px-2 py-0.5 rounded ${activeWebsite === 'dashboard' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'dashboard' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`Dashboard Tab - Sidebar: ${!tabCollapsedStates.dashboard ? 'Visible' : 'Collapsed'}`}
               >
-                Dashboard
+                <span>Dashboard</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.dashboard ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
               <button
                 onClick={() => setActiveWebsite('outlook')}
-                className={`px-2 py-0.5 rounded ${activeWebsite === 'outlook' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'outlook' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`Outlook Tab - Sidebar: ${!tabCollapsedStates.outlook ? 'Visible' : 'Collapsed'}`}
               >
-                Outlook
+                <span>Outlook</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.outlook ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
               <button
                 onClick={() => setActiveWebsite('newtab')}
                 className={`px-2 py-0.5 rounded flex items-center gap-1 ${activeWebsite === 'newtab' ? 'bg-blue-600 text-white font-medium' : 'hover:text-slate-200'}`}
+                title={`New Tab - Sidebar: ${!tabCollapsedStates.newtab ? 'Visible' : 'Collapsed'}`}
               >
                 <Plus className="w-2.5 h-2.5" />
                 <span>New Tab</span>
+                <span className={`w-1 h-1 rounded-full ${!tabCollapsedStates.newtab ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
               </button>
             </div>
 
@@ -980,10 +1006,10 @@ export const LiveSimulator: React.FC = () => {
                   ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/20'
                   : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
               }`}
-              title="Click extension icon in toolbar to expand or collapse docked sidebar"
+              title="Click extension icon in toolbar to toggle sidebar for current tab only (independent per tab)"
             >
               <PanelRight className="w-3.5 h-3.5 text-blue-400" />
-              <span>App Tower</span>
+              <span>App Tower ({activeWebsite})</span>
               <span className={`w-1.5 h-1.5 rounded-full ${!isDockCollapsed ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
             </button>
           </div>
@@ -1243,14 +1269,21 @@ export const LiveSimulator: React.FC = () => {
                       <div className="mt-4 text-xs text-slate-300 space-y-3 leading-relaxed">
                         <p>Hi team,</p>
                         <p>
-                          We've verified that the <strong>App Tower Sidebar</strong> now docks cleanly alongside Outlook on the web without floating!
+                          We've verified that the <strong>App Tower Sidebar</strong> now docks cleanly alongside Outlook on the web without hovering over the main page content!
                         </p>
                         <p>
-                          Click the <strong>"My Day"</strong> button in the top-right ribbon of Outlook above to toggle the side pane overlay on and off.
+                          Both the main Outlook workspace (reading pane, ribbon, message list) and the <strong>"My Day"</strong> floating side pane stop flush at the sidebar margin without overlapping or pushing content off the screen.
                         </p>
-                        <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>The sidebar rail is anchored flush against the right edge. When My Day is open, it sits right next to the rail with zero overlapping.</span>
+                        <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 font-medium">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>Flush Docking & Tab-Independent Collapse:</span>
+                          </div>
+                          <ul className="list-disc list-inside text-[11px] text-slate-300 space-y-1 ml-1">
+                            <li><strong>Zero Hovering:</strong> Main email content stops cleanly at the 44px rail boundary; no UI is obscured.</li>
+                            <li><strong>My Day Pane:</strong> Anchors directly beside the sidebar rail when toggled.</li>
+                            <li><strong>Tab-Specific Collapse:</strong> Clicking the App Tower button toggles the sidebar for <em>this tab only</em> without collapsing your other browser tabs!</li>
+                          </ul>
                         </div>
                       </div>
                     </div>

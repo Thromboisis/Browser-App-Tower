@@ -55,6 +55,18 @@ html.app-tower-docked {
 
 html.app-tower-docked body {
   box-sizing: border-box !important;
+  max-width: calc(100vw - var(--dock-width, 44px)) !important;
+}
+
+/* Outlook Web App and SPA full-viewport container docked reservation */
+/* Anchored at left: 0 so no content is pushed off-screen, and right: 44px so sidebar never hovers */
+html.app-tower-docked #owa-root,
+html.app-tower-docked [id="owa-root"] {
+  left: 0 !important;
+  right: var(--dock-width, 44px) !important;
+  width: calc(100vw - var(--dock-width, 44px)) !important;
+  max-width: calc(100vw - var(--dock-width, 44px)) !important;
+  box-sizing: border-box !important;
 }
 
 /* App list container (strictly vertical column) */
