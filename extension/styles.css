@@ -48,9 +48,22 @@
 }
 
 /* Firmly docked sidebar margin reservation on host page */
+html {
+  transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease !important;
+}
+
 html.app-tower-docked {
   margin-right: var(--dock-width, 44px) !important;
   box-sizing: border-box !important;
+  background-color: var(--bg-primary, #12141a) !important;
+}
+
+html:not(.app-tower-docked) {
+  margin-right: 0px !important;
+}
+
+html body {
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 html.app-tower-docked body {
@@ -60,6 +73,11 @@ html.app-tower-docked body {
 
 /* Outlook Web App and SPA full-viewport container docked reservation */
 /* Anchored at left: 0 so no content is pushed off-screen, and right: 44px so sidebar never hovers */
+html #owa-root,
+html [id="owa-root"] {
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 html.app-tower-docked #owa-root,
 html.app-tower-docked [id="owa-root"] {
   left: 0 !important;
@@ -67,6 +85,38 @@ html.app-tower-docked [id="owa-root"] {
   width: calc(100vw - var(--dock-width, 44px)) !important;
   max-width: calc(100vw - var(--dock-width, 44px)) !important;
   box-sizing: border-box !important;
+}
+
+html:not(.app-tower-docked) #owa-root,
+html:not(.app-tower-docked) [id="owa-root"] {
+  right: 0px !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+}
+
+[data-app-tower-adjusted="true"] {
+  transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Stationary or synchronized placeholder gutter backdrop with matching sidebar background */
+.app-tower-dock-gutter {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: var(--dock-width, 44px) !important;
+  height: 100vh !important;
+  background: var(--bg-primary, #12141a) !important;
+  z-index: 2147483640 !important;
+  pointer-events: none !important;
+  border-left: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  box-sizing: border-box !important;
+  will-change: transform, opacity;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.app-tower-dock-gutter.collapsed {
+  transform: translateX(100%) !important;
+  opacity: 0 !important;
 }
 
 /* App list container (strictly vertical column) */

@@ -1020,10 +1020,14 @@ export const LiveSimulator: React.FC = () => {
           onClick={() => {
             if (contextMenu) setContextMenu(null);
           }}
-          className="relative w-full h-[620px] bg-slate-950 flex overflow-hidden select-none"
+          style={{ backgroundColor: dockColor }}
+          className="relative w-full h-[620px] flex overflow-hidden select-none"
         >
           {/* Main Web Page Content */}
           <main 
+            style={{
+              transition: 'margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), flex 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
             className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950 min-w-0"
           >
             {activeWebsite === 'newtab' ? (
@@ -1281,7 +1285,8 @@ export const LiveSimulator: React.FC = () => {
                           </div>
                           <ul className="list-disc list-inside text-[11px] text-slate-300 space-y-1 ml-1">
                             <li><strong>Zero Hovering:</strong> Main email content stops cleanly at the 44px rail boundary; no UI is obscured.</li>
-                            <li><strong>My Day Pane:</strong> Anchors directly beside the sidebar rail when toggled.</li>
+                            <li><strong>Synchronized Slide-Out:</strong> Page margin and sidebar rail expand & collapse in lockstep with matching 0.35s easing.</li>
+                            <li><strong>Matching Placeholder Color:</strong> The placeholder reservation area shares the exact dark background color of the sidebar.</li>
                             <li><strong>Tab-Specific Collapse:</strong> Clicking the App Tower button toggles the sidebar for <em>this tab only</em> without collapsing your other browser tabs!</li>
                           </ul>
                         </div>

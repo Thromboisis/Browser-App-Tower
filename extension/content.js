@@ -69,11 +69,18 @@
       const widthPx = `${currentDockWidth}px`;
       guardStyle.textContent = `
         html {
-          transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          transition: margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease !important;
         }
         html.app-tower-docked {
           margin-right: ${widthPx} !important;
           box-sizing: border-box !important;
+          background-color: ${currentDockColor} !important;
+        }
+        html:not(.app-tower-docked) {
+          margin-right: 0px !important;
+        }
+        html body {
+          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
         html.app-tower-docked body {
           box-sizing: border-box !important;
@@ -81,6 +88,10 @@
         }
         /* Anchor Outlook Web and full-bleed SPA roots at left: 0 so no content is pushed off-screen */
         /* and stop flush at right: ${widthPx} so sidebar NEVER hovers over main page content */
+        html #owa-root,
+        html [id="owa-root"] {
+          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
         html.app-tower-docked #owa-root,
         html.app-tower-docked [id="owa-root"] {
           left: 0 !important;
@@ -88,6 +99,15 @@
           width: calc(100vw - ${widthPx}) !important;
           max-width: calc(100vw - ${widthPx}) !important;
           box-sizing: border-box !important;
+        }
+        html:not(.app-tower-docked) #owa-root,
+        html:not(.app-tower-docked) [id="owa-root"] {
+          right: 0px !important;
+          width: 100vw !important;
+          max-width: 100vw !important;
+        }
+        [data-app-tower-adjusted="true"] {
+          transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
       `;
     }
@@ -228,7 +248,13 @@
       adjustedElements.clear();
     }
 
+    let restoreTimeout = null;
+
     function reserveDockMargin() {
+      if (restoreTimeout) {
+        clearTimeout(restoreTimeout);
+        restoreTimeout = null;
+      }
       const widthPx = `${currentDockWidth}px`;
       applyGuardStyles();
       document.documentElement.classList.add('app-tower-docked');
@@ -240,16 +266,48 @@
     }
 
     function restoreDockMargin() {
+      if (restoreTimeout) clearTimeout(restoreTimeout);
       document.documentElement.classList.remove('app-tower-docked');
-      if (originalMarginRight) {
-        document.documentElement.style.marginRight = originalMarginRight;
-      } else {
-        document.documentElement.style.removeProperty('margin-right');
+
+      // Smoothly animate margin-right and right to 0px in lockstep with the dock's 0.35s slide-out
+      document.documentElement.style.setProperty('margin-right', '0px', 'important');
+
+      if (document.body && document.body.hasAttribute('data-app-tower-body-adj')) {
+        document.body.style.setProperty('right', '0px', 'important');
+        document.body.style.setProperty('width', '100vw', 'important');
+        document.body.style.setProperty('max-width', '100vw', 'important');
       }
-      document.documentElement.style.removeProperty('width');
-      document.documentElement.style.removeProperty('box-sizing');
-      restoreBodyAndRootAdjustment();
-      restoreUniversalOverlayGuard();
+
+      const owaRoot = document.getElementById('owa-root');
+      if (owaRoot && owaRoot.hasAttribute('data-app-tower-root-adj')) {
+        owaRoot.style.setProperty('right', '0px', 'important');
+        owaRoot.style.setProperty('width', '100vw', 'important');
+        owaRoot.style.setProperty('max-width', '100vw', 'important');
+      }
+
+      adjustedElements.forEach(el => {
+        try {
+          if (el && el.hasAttribute('data-app-tower-adjusted')) {
+            const orig = el.dataset.appTowerOrigRight || '0px';
+            el.style.setProperty('right', orig, 'important');
+          }
+        } catch (e) {}
+      });
+
+      // After the 350ms synchronized transition finishes, fully clean up temporary properties
+      restoreTimeout = setTimeout(() => {
+        if (!isDockVisible) {
+          if (originalMarginRight) {
+            document.documentElement.style.marginRight = originalMarginRight;
+          } else {
+            document.documentElement.style.removeProperty('margin-right');
+          }
+          document.documentElement.style.removeProperty('width');
+          document.documentElement.style.removeProperty('box-sizing');
+          restoreBodyAndRootAdjustment();
+          restoreUniversalOverlayGuard();
+        }
+      }, 360);
     }
 
     // Monitor for dynamically rendered right-anchored overlays on any website
@@ -290,6 +348,11 @@
         host.style.setProperty('--dock-width', `${currentDockWidth}px`);
         host.style.setProperty('--bg-primary', currentDockColor);
       }
+      if (gutter) {
+        gutter.style.setProperty('--dock-width', `${currentDockWidth}px`);
+        gutter.style.setProperty('--bg-primary', currentDockColor);
+        gutter.style.background = currentDockColor;
+      }
       if (dock) {
         dock.style.setProperty('--dock-width', `${currentDockWidth}px`);
         dock.style.setProperty('--bg-primary', currentDockColor);
@@ -314,6 +377,12 @@
 
     const shadow = host.attachShadow({ mode: 'open' });
 
+    // Dedicated placeholder gutter rail in Shadow DOM with exact matching sidebar background
+    const gutter = document.createElement('div');
+    gutter.className = 'app-tower-dock-gutter' + (isDockVisible ? '' : ' collapsed');
+    gutter.id = 'app-tower-gutter';
+    shadow.appendChild(gutter);
+
     // 3. Inject CSS Styles Directly into Shadow DOM
     const styleTag = document.createElement('style');
     styleTag.textContent = `
@@ -327,6 +396,26 @@
         --text-primary: #f8fafc;
         --text-muted: #94a3b8;
         all: initial;
+      }
+
+      .app-tower-dock-gutter {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: var(--dock-width) !important;
+        height: 100vh !important;
+        background: var(--bg-primary) !important;
+        border-left: 1px solid var(--border-subtle) !important;
+        z-index: 2147483640 !important;
+        box-sizing: border-box !important;
+        pointer-events: none !important;
+        will-change: transform, opacity;
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      }
+
+      .app-tower-dock-gutter.collapsed {
+        transform: translateX(100%) !important;
+        opacity: 0 !important;
       }
 
       .app-tower-dock {
@@ -1948,11 +2037,13 @@
       } catch (e) {}
       if (collapsed) {
         dock.classList.add('collapsed');
+        if (gutter) gutter.classList.add('collapsed');
         closeContextMenu();
         closeAppModal();
         restoreDockMargin();
       } else {
         dock.classList.remove('collapsed');
+        if (gutter) gutter.classList.remove('collapsed');
         reserveDockMargin();
       }
     }
