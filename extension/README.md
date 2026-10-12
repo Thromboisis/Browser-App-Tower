@@ -12,11 +12,16 @@ A Chrome extension replicating the Microsoft Edge "App Tower" docked sidebar wit
    - The 44px sidebar rail is anchored firmly flush against the right edge.
    - Pushes page layout by reserving a `44px` margin (`html.app-tower-docked { margin-right: 44px }`) so webpage content never hides behind the sidebar.
 
-3. **Toolbar Toggle Button**:
-   - The collapse option is placed in the Chrome extension toolbar action button (`chrome.action.onClicked`).
-   - Clicking the toolbar extension icon toggles the dock expanded or collapsed.
+3. **Toolbar Toggle Button & Tab-Specific Independence**:
+   - The collapse option is placed in the browser extension toolbar action button (`chrome.action.onClicked`).
+   - Clicking the toolbar extension icon toggles the dock expanded or collapsed **only for the current tab** (`sessionStorage`), allowing you to collapse the dock on wide pages while keeping it visible on others.
 
-4. **Configurable Apps (+ Button to Add, Right-Click to Edit, Drag to Re-Order)**:
+4. **Universal SPA & Overlay Guard (e.g., Outlook Web, Jira, GitHub)**:
+   - **Outlook Web & Full-Bleed SPAs**: Anchors host containers (`#owa-root` and `body`) flush at `right: 44px` with synchronized 0.35s slide transitions so content is never hidden behind the sidebar.
+   - **Right-Docked Overlay Protection**: Automatically detects fixed/absolute side drawers (such as Outlook's *"My Day"* pane) and shifts them flush with the sidebar rail.
+   - **Synchronized Slide & Color Matching**: The page content margin animates in lockstep with the rail, with the background placeholder styled to match the sidebar.
+
+5. **Configurable Apps (+ Button to Add, Right-Click to Edit, Drag to Re-Order)**:
    - **Drag & Drop Re-Ordering**: Click and drag any icon in the sidebar rail up or down to instantly re-arrange your apps; the order is saved automatically.
    - Starts directly with your apps (top logo removed).
    - Bottom `+` (Plus) button lets you add any web app or bookmark with a custom URL.
@@ -26,21 +31,21 @@ A Chrome extension replicating the Microsoft Edge "App Tower" docked sidebar wit
      - **Reset size & location**: Reverts the companion window to default geometry.
      - **Remove from dock**: Deletes custom apps from your sidebar rail.
 
-5. **Mobile vs. Desktop User-Agent Switching**:
+6. **Mobile vs. Desktop User-Agent Switching**:
    - In both the Add and Edit pop-up modals, a slider switch lets you choose between:
      - 🖥️ **Desktop Layout**: Standard desktop User-Agent string. The website serves its desktop web application.
      - 📱 **Mobile Layout**: Emulates a real smartphone User-Agent (`Linux; Android 14; Pixel 8 ... Mobile Safari`) and `Sec-CH-UA-Mobile: ?1` via Chrome's `declarativeNetRequest`.
      - When toggled, the open companion window immediately reloads so the website detects the phone User-Agent and switches to its mobile interface!
 
-6. **Per-App Window Sizing & Location Persistence**:
+7. **Per-App Window Sizing & Location Persistence**:
    - Drag or resize any app window; its exact coordinates (`left`, `top`, `width`, `height`) are saved per-app to `chrome.storage.local`.
    - Clicking "Save App" in the Edit modal reloads the app window to switch layouts while strictly preserving its custom size and location.
    - Right-click "Reset size & location" returns that app's window back to default geometry next to the dock.
 
-7. **Sidebar Excluded from Companion Windows**:
+8. **Sidebar Excluded from Companion Windows**:
    - App windows opened from sidebar icons do not inject the dock rail into themselves, keeping companion windows completely clean and distraction-free.
 
-8. **Smart "Save App" Change Detection**:
+9. **Smart "Save App" Change Detection**:
    - The "Save App" button only activates if genuine modifications were made compared to the currently saved settings (e.g. toggling mobile and toggling back resets to inactive).
 
 ## Note on Restricted Chrome Pages
