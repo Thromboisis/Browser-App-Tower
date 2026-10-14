@@ -16,27 +16,31 @@
   all: initial;
 }
 
-/* UNIVERSAL FLOATING RAIL (Right edge, floats over page, host DOM 100% untouched) */
+/* UNIVERSAL FLOATING RAIL (Right edge, dynamic height island, transparent where there are no icons, zero drop shadow) */
 .app-tower-dock {
   pointer-events: auto !important;
   position: fixed !important;
-  top: 0 !important;
+  top: 100px;
   right: 0 !important;
   width: var(--dock-width) !important;
-  height: 100vh !important;
+  height: auto !important;
+  max-height: calc(100vh - 24px) !important;
   background: var(--bg-primary) !important;
-  border-left: 1px solid var(--border-subtle) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-right: none !important;
+  border-radius: 12px 0 0 12px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  padding: 10px 0 16px 0 !important;
+  padding: 6px 0 10px 0 !important;
   z-index: 2147483645 !important;
   box-sizing: border-box !important;
   user-select: none !important;
   -webkit-font-smoothing: antialiased;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.45), -1px 0 6px rgba(0, 0, 0, 0.25) !important;
-  will-change: transform;
+  box-shadow: none !important;
+  filter: none !important;
+  will-change: transform, top;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
 }
 
@@ -46,7 +50,51 @@
   pointer-events: none !important;
 }
 
-/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed) */
+.app-tower-dock.dragging {
+  transition: none !important;
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* DRAGGABLE EDGE & HANDLE (Slide the visible sidebar up/down) */
+.dock-drag-handle {
+  width: 28px !important;
+  height: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: grab !important;
+  cursor: ns-resize !important;
+  color: var(--text-muted, #94a3b8) !important;
+  opacity: 0.65 !important;
+  transition: opacity 0.15s ease, color 0.15s ease !important;
+  margin-bottom: 2px !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+.dock-drag-handle:hover,
+.app-tower-dock.dragging .dock-drag-handle {
+  opacity: 1 !important;
+  color: #38bdf8 !important;
+}
+
+.dock-drag-handle:active,
+.app-tower-dock.dragging .dock-drag-handle {
+  cursor: grabbing !important;
+}
+
+.dock-drag-edge {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 8px !important;
+  height: 100% !important;
+  cursor: ns-resize !important;
+  z-index: 2 !important;
+}
+
+/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed, zero drop shadow) */
 .app-tower-edge-tab {
   position: fixed !important;
   top: 50% !important;
@@ -58,7 +106,7 @@
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12)) !important;
   border-right: none !important;
   border-radius: 8px 0 0 8px !important;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: none !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -74,7 +122,7 @@
   width: 22px !important;
   background: var(--bg-hover, #1e222d) !important;
   color: #38bdf8 !important;
-  box-shadow: -3px 0 16px rgba(56, 189, 248, 0.25) !important;
+  box-shadow: none !important;
 }
 
 .app-tower-edge-tab.hidden {
@@ -99,8 +147,8 @@
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
-  margin-bottom: 6px !important;
-  gap: 3px !important;
+  margin-bottom: 4px !important;
+  gap: 2px !important;
 }
 
 .dock-collapse-btn {
@@ -108,7 +156,7 @@
   border: none !important;
   color: var(--text-muted, #94a3b8) !important;
   width: 26px !important;
-  height: 26px !important;
+  height: 24px !important;
   border-radius: 6px !important;
   display: flex !important;
   align-items: center !important;

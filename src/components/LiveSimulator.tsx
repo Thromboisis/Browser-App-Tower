@@ -151,6 +151,20 @@ export const LiveSimulator: React.FC = () => {
     }
   });
 
+  // Dock Vertical Position & Drag-to-Slide State
+  const [dockTop, setDockTop] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('app_tower_dock_top');
+      return saved ? parseInt(saved, 10) || 60 : 60;
+    } catch (e) {
+      return 60;
+    }
+  });
+  const [isDraggingDock, setIsDraggingDock] = useState(false);
+  const dockDragStartRef = useRef<{ startY: number; initialTop: number }>({ startY: 0, initialTop: 60 });
+  const dockRef = useRef<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
   const [searchProvider, setSearchProvider] = useState<'google' | 'duckduckgo' | 'bing' | 'ecosia' | 'brave' | 'custom'>(() => {
     try {
       return (localStorage.getItem('app_tower_search_provider') as any) || 'google';
@@ -462,6 +476,21 @@ export const LiveSimulator: React.FC = () => {
   // Global mouse listeners for Dragging Modal, Dragging Window, and Resizing Window
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      // Dock dragging (slide visible sidebar up/down)
+      if (isDraggingDock) {
+        const deltaY = e.clientY - dockDragStartRef.current.startY;
+        const containerHeight = viewportRef.current?.clientHeight || 620;
+        const currentDockHeight = dockRef.current?.offsetHeight || 200;
+        const minTop = 8;
+        const maxTop = Math.max(minTop, containerHeight - currentDockHeight - 8);
+        const newTop = Math.max(minTop, Math.min(maxTop, dockDragStartRef.current.initialTop + deltaY));
+        setDockTop(newTop);
+        try {
+          localStorage.setItem('app_tower_dock_top', newTop.toString());
+        } catch (err) {}
+        return;
+      }
+
       // Modal dragging
       if (isDraggingModal) {
         const deltaX = e.clientX - modalDragRef.current.startX;
@@ -528,6 +557,9 @@ export const LiveSimulator: React.FC = () => {
     };
 
     const handleMouseUp = () => {
+      if (isDraggingDock) {
+        setIsDraggingDock(false);
+      }
       if (isDraggingModal) {
         setIsDraggingModal(false);
       }
@@ -539,7 +571,7 @@ export const LiveSimulator: React.FC = () => {
       }
     };
 
-    if (isDragging || isResizing || isDraggingModal) {
+    if (isDragging || isResizing || isDraggingModal || isDraggingDock) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -548,7 +580,7 @@ export const LiveSimulator: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, isDraggingModal, activeAppId, apps]);
+  }, [isDragging, isResizing, isDraggingModal, isDraggingDock, activeAppId, apps]);
 
   const activeApp = apps.find(a => a.id === activeAppId) || null;
 
@@ -1034,6 +1066,7 @@ export const LiveSimulator: React.FC = () => {
 
         {/* Viewport Area: Full-Width Webpage + Universal Floating Rail (Host DOM 100% untouched) */}
         <div 
+          ref={viewportRef}
           onClick={() => {
             if (contextMenu) setContextMenu(null);
           }}
@@ -1553,33 +1586,85 @@ export const LiveSimulator: React.FC = () => {
             )}
           </main>
 
-          {/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed) */}
+          {/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed, zero drop shadow) */}
           {isDockCollapsed && (
             <button
               onClick={toggleDockFromToolbar}
-              style={{ backgroundColor: dockColor }}
-              className="absolute top-1/2 -translate-y-1/2 right-0 w-3.5 hover:w-5 h-14 rounded-l-lg border border-r-0 border-white/15 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 flex items-center justify-center shadow-lg transition-all z-30 cursor-pointer group"
+              style={{ 
+                backgroundColor: dockColor,
+                top: `${dockTop + 20}px`,
+                boxShadow: 'none',
+                filter: 'none'
+              }}
+              className="absolute right-0 w-3.5 hover:w-5 h-12 rounded-l-lg border border-r-0 border-white/15 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all z-30 cursor-pointer group"
               title="Open App Tower Floating Rail (Host page DOM is 100% untouched)"
             >
               <span className="text-[10px] font-bold group-hover:-translate-x-0.5 transition-transform">‹</span>
             </button>
           )}
 
-          {/* UNIVERSAL FLOATING RAIL (Floats on right edge, leaves host page DOM 100% untouched) */}
+          {/* UNIVERSAL FLOATING RAIL (Floating island: grows/shrinks with apps, draggable edge & top handle, transparent where no icons, zero drop shadow) */}
           <aside
+            ref={dockRef}
             style={{
               width: `${dockWidth}px`,
               backgroundColor: dockColor,
+              top: `${dockTop}px`,
               transform: isDockCollapsed ? 'translateX(100%)' : 'translateX(0)',
               opacity: isDockCollapsed ? 0 : 1,
               pointerEvents: isDockCollapsed ? 'none' : 'auto',
-              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.45), -1px 0 6px rgba(0, 0, 0, 0.25)',
-              transition: 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, background-color 0.15s ease'
+              boxShadow: 'none',
+              filter: 'none',
+              transition: isDraggingDock
+                ? 'none'
+                : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, background-color 0.15s ease'
             }}
-            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-2.5 z-40 select-none overflow-hidden"
+            className={`absolute right-0 h-auto max-h-[calc(100%-20px)] border border-r-0 border-white/10 rounded-l-2xl flex flex-col items-center py-2 z-40 select-none ${
+              isDraggingDock ? 'cursor-grabbing' : ''
+            }`}
           >
+            {/* Draggable Left Edge (Slide visible sidebar up and down) */}
+            <div
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                setIsDraggingDock(true);
+                dockDragStartRef.current = {
+                  startY: e.clientY,
+                  initialTop: dockTop
+                };
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              className="absolute left-0 top-0 w-2.5 h-full cursor-ns-resize hover:bg-sky-400/25 active:bg-sky-400/40 rounded-l-2xl z-20 group"
+              title="Drag edge to slide sidebar up/down"
+            >
+              <div className="w-[2px] h-6 bg-slate-500/40 group-hover:bg-sky-400 rounded-full mx-auto my-auto absolute top-1/2 -translate-y-1/2 left-0.5 transition-colors" />
+            </div>
+
+            {/* Draggable Top Handle (3 dots / grip) */}
+            <div
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                setIsDraggingDock(true);
+                dockDragStartRef.current = {
+                  startY: e.clientY,
+                  initialTop: dockTop
+                };
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              className="w-full flex items-center justify-center py-0.5 mb-1 cursor-ns-resize text-slate-500 hover:text-sky-400 select-none group"
+              title="Drag to slide sidebar up/down"
+            >
+              <div className="flex gap-1 items-center px-2 py-0.5 rounded-full group-hover:bg-slate-800/60 transition">
+                <span className="w-1 h-1 rounded-full bg-current opacity-70 group-hover:opacity-100" />
+                <span className="w-1 h-1 rounded-full bg-current opacity-70 group-hover:opacity-100" />
+                <span className="w-1 h-1 rounded-full bg-current opacity-70 group-hover:opacity-100" />
+              </div>
+            </div>
+
             {/* Top Collapse Toggle Button */}
-            <div className="flex flex-col items-center w-full mb-1">
+            <div className="flex flex-col items-center w-full mb-1.5">
               <button
                 onClick={toggleDockFromToolbar}
                 className="w-6 h-6 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
@@ -1589,7 +1674,7 @@ export const LiveSimulator: React.FC = () => {
               </button>
             </div>
 
-            {/* App Icons (Vertical Stack) */}
+            {/* App Icons (Vertical Stack - dynamically grows or shrinks) */}
             <div 
               style={{
                 width: `${dockWidth}px`,
@@ -1637,10 +1722,10 @@ export const LiveSimulator: React.FC = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           const rect = e.currentTarget.getBoundingClientRect();
-                          const parentRect = e.currentTarget.parentElement?.getBoundingClientRect() || { top: 0 };
+                          const viewportRect = viewportRef.current?.getBoundingClientRect() || { top: 0 };
                           setContextMenu({
                             app,
-                            topPos: Math.max(12, rect.top - parentRect.top)
+                            topPos: Math.max(12, rect.top - viewportRect.top)
                           });
                         }}
                         className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-default ${
@@ -1672,7 +1757,7 @@ export const LiveSimulator: React.FC = () => {
                     setContextMenu(null);
                     openAddAppModal();
                   }}
-                  className="mt-1.5 w-8 h-8 flex items-center justify-center cursor-default transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
+                  className="mt-1 w-8 h-8 flex items-center justify-center cursor-default transition-transform duration-150 hover:scale-125 opacity-90 hover:opacity-100"
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -1694,20 +1779,15 @@ export const LiveSimulator: React.FC = () => {
                     setContextMenu(null);
                     setIsSettingsModalOpen(true);
                   }}
-                  className="mt-1 w-8 h-8 flex items-center justify-center cursor-default transition-all duration-150 text-slate-400 group-hover:text-white"
+                  className="mt-0.5 w-8 h-8 flex items-center justify-center cursor-default transition-all duration-150 text-slate-400 group-hover:text-white"
                 >
                   <Settings className="w-4 h-4 transition-transform duration-200 group-hover:rotate-45" />
                 </button>
-                {/* Instant Hover Badge positioned to the left of the gear icon, without rotating */}
+                {/* Instant Hover Badge positioned to the left of the gear icon */}
                 <div className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-150 transform translate-x-1 group-hover:translate-x-0 z-50 bg-[#1e222d] text-slate-100 text-[11px] font-medium px-2 py-1 rounded-md whitespace-nowrap shadow-xl border border-white/10">
                   Sidebar & Tab Settings
                 </div>
               </div>
-            </div>
-
-            {/* Bottom spacer */}
-            <div className="w-full flex justify-center py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
             </div>
           </aside>
 
@@ -1717,7 +1797,7 @@ export const LiveSimulator: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               style={{
                 top: `${contextMenu.topPos}px`,
-                right: '50px'
+                right: `${dockWidth + 8}px`
               }}
               className="absolute z-50 min-w-[210px] bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 select-none animate-in fade-in duration-100"
             >

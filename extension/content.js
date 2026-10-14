@@ -55,6 +55,25 @@
     let currentDockColor = '#12141a';
     let newTabOverrideEnabled = false;
     let cachedFavicons = {};
+    let dockTop = 100;
+    try {
+      const storedTop = sessionStorage.getItem('app_tower_dock_top');
+      if (storedTop !== null) {
+        dockTop = parseInt(storedTop, 10) || 100;
+      }
+    } catch (e) {}
+
+    function clampAndApplyDockTop(newTop = dockTop) {
+      if (!dock) return;
+      const barHeight = dock.offsetHeight || 180;
+      const minTop = 8;
+      const maxTop = Math.max(minTop, window.innerHeight - barHeight - 8);
+      dockTop = Math.max(minTop, Math.min(maxTop, Math.round(newTop)));
+      dock.style.top = `${dockTop}px`;
+      if (edgeTab) {
+        edgeTab.style.top = `${dockTop + Math.min(barHeight / 2, 60)}px`;
+      }
+    }
 
     function updateDockStyles() {
       if (host) {
@@ -120,22 +139,27 @@
       .app-tower-dock {
         pointer-events: auto !important;
         position: fixed !important;
-        top: 0 !important;
+        top: 100px;
         right: 0 !important;
         width: var(--dock-width) !important;
-        height: 100vh !important;
+        height: auto !important;
+        max-height: calc(100vh - 24px) !important;
         background: var(--bg-primary) !important;
-        border-left: 1px solid var(--border-subtle) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-right: none !important;
+        border-radius: 12px 0 0 12px !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        padding: 10px 0 16px 0 !important;
+        padding: 6px 0 10px 0 !important;
         z-index: 2147483645 !important;
         box-sizing: border-box !important;
         user-select: none !important;
-        box-shadow: -4px 0 24px rgba(0, 0, 0, 0.45), -1px 0 6px rgba(0, 0, 0, 0.25) !important;
-        will-change: transform;
+        -webkit-font-smoothing: antialiased;
+        box-shadow: none !important;
+        filter: none !important;
+        will-change: transform, top;
         transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
       }
 
@@ -143,6 +167,49 @@
         transform: translateX(100%) !important;
         opacity: 0 !important;
         pointer-events: none !important;
+      }
+
+      .app-tower-dock.dragging {
+        transition: none !important;
+        cursor: grabbing !important;
+        user-select: none !important;
+      }
+
+      .dock-drag-handle {
+        width: 28px !important;
+        height: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: grab !important;
+        cursor: ns-resize !important;
+        color: var(--text-muted, #94a3b8) !important;
+        opacity: 0.65 !important;
+        transition: opacity 0.15s ease, color 0.15s ease !important;
+        margin-bottom: 2px !important;
+        touch-action: none !important;
+        user-select: none !important;
+      }
+
+      .dock-drag-handle:hover,
+      .app-tower-dock.dragging .dock-drag-handle {
+        opacity: 1 !important;
+        color: #38bdf8 !important;
+      }
+
+      .dock-drag-handle:active,
+      .app-tower-dock.dragging .dock-drag-handle {
+        cursor: grabbing !important;
+      }
+
+      .dock-drag-edge {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 8px !important;
+        height: 100% !important;
+        cursor: ns-resize !important;
+        z-index: 2 !important;
       }
 
       .app-tower-edge-tab {
@@ -156,7 +223,7 @@
         border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12)) !important;
         border-right: none !important;
         border-radius: 8px 0 0 8px !important;
-        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35) !important;
+        box-shadow: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -172,7 +239,7 @@
         width: 22px !important;
         background: var(--bg-hover, #1e222d) !important;
         color: #38bdf8 !important;
-        box-shadow: -3px 0 16px rgba(56, 189, 248, 0.25) !important;
+        box-shadow: none !important;
       }
 
       .app-tower-edge-tab.hidden {
@@ -196,8 +263,8 @@
         flex-direction: column !important;
         align-items: center !important;
         width: 100% !important;
-        margin-bottom: 6px !important;
-        gap: 3px !important;
+        margin-bottom: 4px !important;
+        gap: 2px !important;
       }
 
       .dock-collapse-btn {
@@ -205,7 +272,7 @@
         border: none !important;
         color: var(--text-muted, #94a3b8) !important;
         width: 26px !important;
-        height: 26px !important;
+        height: 24px !important;
         border-radius: 6px !important;
         display: flex !important;
         align-items: center !important;
@@ -956,6 +1023,14 @@
     dock.id = 'app-tower-dock';
 
     dock.innerHTML = `
+      <div class="dock-drag-edge" id="dock-drag-edge" title="Drag edge to slide up/down"></div>
+      <div class="dock-drag-handle" id="dock-drag-handle" title="Drag to slide up/down">
+        <svg viewBox="0 0 24 10" width="18" height="8" fill="currentColor">
+          <circle cx="5" cy="5" r="1.5"></circle>
+          <circle cx="12" cy="5" r="1.5"></circle>
+          <circle cx="19" cy="5" r="1.5"></circle>
+        </svg>
+      </div>
       <div class="dock-header">
         <button class="dock-collapse-btn" id="btn-collapse-dock" data-tooltip="Collapse Floating Rail" title="Collapse Floating Rail">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
@@ -995,6 +1070,53 @@
         setDockCollapsed(true);
       });
     }
+
+    const dragHandle = dock.querySelector('#dock-drag-handle');
+    const dragEdge = dock.querySelector('#dock-drag-edge');
+
+    let isDraggingDock = false;
+    let dockDragStartY = 0;
+    let dockDragStartTop = 0;
+
+    function onDockDragStart(e) {
+      if (e.button !== 0) return;
+      isDraggingDock = true;
+      dockDragStartY = e.clientY;
+      dockDragStartTop = dock.getBoundingClientRect().top;
+      dock.classList.add('dragging');
+
+      window.addEventListener('mousemove', onDockDragMove, { passive: false });
+      window.addEventListener('mouseup', onDockDragEnd);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function onDockDragMove(e) {
+      if (!isDraggingDock) return;
+      const deltaY = e.clientY - dockDragStartY;
+      clampAndApplyDockTop(dockDragStartTop + deltaY);
+      e.preventDefault();
+    }
+
+    function onDockDragEnd() {
+      if (!isDraggingDock) return;
+      isDraggingDock = false;
+      dock.classList.remove('dragging');
+      window.removeEventListener('mousemove', onDockDragMove);
+      window.removeEventListener('mouseup', onDockDragEnd);
+
+      try {
+        sessionStorage.setItem('app_tower_dock_top', String(dockTop));
+      } catch (e) {}
+      chrome.storage.local.set({ dock_top: dockTop });
+    }
+
+    if (dragHandle) dragHandle.addEventListener('mousedown', onDockDragStart);
+    if (dragEdge) dragEdge.addEventListener('mousedown', onDockDragStart);
+
+    window.addEventListener('resize', () => {
+      clampAndApplyDockTop(dockTop);
+    });
 
     // Context Menu Element
     const contextMenu = document.createElement('div');
@@ -1454,6 +1576,10 @@
 
         appListContainer.appendChild(btn);
       });
+      // Dynamic height adjustment: visible sidebar grows/shrinks with app icons
+      requestAnimationFrame(() => {
+        clampAndApplyDockTop();
+      });
     }
 
     // 8. Launch Floating Companion Window Positioned Adjacent to Dock
@@ -1470,7 +1596,7 @@
         metrics: {
           screenWidth: screenWidth,
           height: screenHeight,
-          top: 0
+          top: dockTop
         }
       });
     }
@@ -1559,16 +1685,16 @@
 
     // Movable / Dragging support for Modal Dialog
     let isDraggingModal = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
+    let modalDragStartX = 0;
+    let modalDragStartY = 0;
     let initialModalLeft = 0;
     let initialModalTop = 0;
 
     modalDragHeader.addEventListener('mousedown', (e) => {
       if (e.target.closest('#modal-btn-close')) return;
       isDraggingModal = true;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
+      modalDragStartX = e.clientX;
+      modalDragStartY = e.clientY;
 
       const rect = modalCard.getBoundingClientRect();
       initialModalLeft = rect.left;
@@ -1586,8 +1712,8 @@
 
     function handleModalMouseMove(e) {
       if (!isDraggingModal) return;
-      const deltaX = e.clientX - dragStartX;
-      const deltaY = e.clientY - dragStartY;
+      const deltaX = e.clientX - modalDragStartX;
+      const deltaY = e.clientY - modalDragStartY;
 
       const modalWidth = modalCard.offsetWidth || 375;
       const modalHeight = modalCard.offsetHeight || 380;
@@ -1868,7 +1994,7 @@
     });
 
     // 13. Initialize on Load
-    chrome.storage.local.get(['dock_apps', 'app_favicons', 'dock_width', 'dock_color', 'new_tab_override_enabled'], (data) => {
+    chrome.storage.local.get(['dock_apps', 'app_favicons', 'dock_width', 'dock_color', 'new_tab_override_enabled', 'dock_top'], (data) => {
       if (typeof data.dock_width === 'number') {
         currentDockWidth = data.dock_width;
       }
@@ -1881,7 +2007,11 @@
       if (data.app_favicons && typeof data.app_favicons === 'object') {
         cachedFavicons = data.app_favicons;
       }
+      if (typeof data.dock_top === 'number') {
+        dockTop = data.dock_top;
+      }
       updateDockStyles();
+      clampAndApplyDockTop();
 
       if (data.dock_apps && Array.isArray(data.dock_apps)) {
         currentApps = data.dock_apps;
