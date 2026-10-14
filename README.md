@@ -72,10 +72,15 @@ Because companion apps open as frameless native browser popup windows docked flu
 - Pushes and reserves page layout by setting `margin-right: 44px !important` on `html.app-tower-docked` so webpage content never hides behind the sidebar.
 - Preserves responsive design across all standard websites.
 
-### 2. Independent Per-Tab Collapse State
-- Unlike extensions that force a global toggle across all browser windows, the collapse state is **tab-isolated** using `sessionStorage`.
-- You can collapse the dock on wide spreadsheets or code editors while leaving it open on documentation or communication tabs.
+### 2. Independent Per-Tab Collapse State (Collapsed by Default)
+- **Collapsed by Default**: When opening any new website or browser tab, App Tower defaults to **collapsed**. This ensures pages load completely clean and unaltered without reserving margins or displaying sidebars until you explicitly choose to open it.
+- **Tab-Specific Independence (`sessionStorage`)**: Unlike extensions that force a global toggle across all browser windows, the collapse state is **tab-isolated** using `sessionStorage`.
+- You can keep the dock open on your Jira or Outlook tab while leaving other tabs clean and collapsed.
 - Clicking the extension icon in your browser toolbar toggles visibility only for the active tab.
+
+### 3. Tactile 3D App Tower Icon
+- Replicates the distinct "App Tower" physical metaphor: a vertical stack of three rounded isometric app cubes (Golden Star, Purple Pin, Cyan App Grid) over a dark slate background.
+- Ships with pixel-crisp 16px, 48px, and 128px assets tailored for the browser toolbar, extension menus, and new tab shortcuts.
 
 ### 3. Full-Viewport SPA & Universal Overlay Guard
 - **Outlook Web & Full-Bleed SPAs**: Outlook Web App uses fixed full-viewport containers (`#owa-root` and `body` with `right: 0`). App Tower includes dedicated layout guards that clamp these containers from `left: 0` to `right: 44px`, preventing the sidebar from hovering over email reading panes or ribbon bars.

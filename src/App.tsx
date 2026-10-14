@@ -9,9 +9,7 @@ import {
   Code2, 
   ShieldCheck, 
   BookOpen, 
-  PanelRight,
   CheckCircle2,
-  Download,
   Chrome,
   Globe
 } from 'lucide-react';
@@ -20,6 +18,7 @@ import { CodeViewer } from './components/CodeViewer';
 import { RuleVisualizer } from './components/RuleVisualizer';
 import { InstallGuide } from './components/InstallGuide';
 import { downloadExtensionZip } from './utils/downloadExtension';
+import { APP_TOWER_SVG } from './data/appTowerIcon';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'simulator' | 'code' | 'rules' | 'install'>('simulator');
@@ -41,24 +40,29 @@ export default function App() {
       {/* Top Navbar */}
       <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 p-[1px] shadow-lg shadow-blue-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center text-blue-400">
-              <PanelRight className="w-4 h-4 text-blue-400" />
-            </div>
+          {/* Official App Tower 3-Cube Logo */}
+          <div 
+            className="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 p-1 shadow-lg shadow-amber-500/10 flex items-center justify-center shrink-0"
+            title="App Tower Sidebar"
+          >
+            <div 
+              className="w-full h-full"
+              dangerouslySetInnerHTML={{ __html: APP_TOWER_SVG }}
+            />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold tracking-tight text-white">App Tower Sidebar</h1>
               <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                v1.3 MV3
+                v1.15 MV3
               </span>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                Chrome & Firefox
+                Universal Floating Rail
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              One Codebase • Multi-Browser Automatic Build & ZIP Packaging
+              Leaves Host DOM 100% Untouched • Chrome & Firefox Universal Build
             </p>
           </div>
         </div>
@@ -120,7 +124,7 @@ export default function App() {
             <button
               onClick={() => handleDownload('chrome')}
               disabled={downloadingBrowser !== null}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-sm shadow-blue-500/20 transition active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-sm shadow-blue-500/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Download Chrome & Edge compatible ZIP package"
             >
               <Chrome className="w-3.5 h-3.5" />
@@ -130,7 +134,7 @@ export default function App() {
             <button
               onClick={() => handleDownload('firefox')}
               disabled={downloadingBrowser !== null}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold shadow-sm shadow-orange-500/20 transition active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold shadow-sm shadow-orange-500/20 transition active:scale-95 disabled:opacity-50 cursor-pointer"
               title="Download Firefox compatible WebExtension ZIP package"
             >
               <Globe className="w-3.5 h-3.5" />
@@ -151,15 +155,13 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/60 py-4 px-6 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span>App Tower Sidebar v1.3</span>
+          <span>App Tower Sidebar v1.14</span>
           <span>•</span>
           <span>Unified Codebase for Google Chrome & Mozilla Firefox</span>
-          <span>•</span>
-          <span>Automated Dual-ZIP Packaging</span>
         </div>
         <div className="flex items-center gap-4 text-[11px]">
           <span className="text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Chrome & Firefox Unpack
+            <CheckCircle2 className="w-3.5 h-3.5" /> Default Collapsed Mode Active
           </span>
         </div>
       </footer>

@@ -44,8 +44,8 @@ export const InstallGuide: React.FC = () => {
             <p className="text-slate-300 text-[11px] mt-1">Runs as top-level native browser companion windows. Immune to iframe blocking.</p>
           </div>
           <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-900/40">
-            <span className="font-semibold text-emerald-300">02. Toolbar Toggle</span>
-            <p className="text-slate-300 text-[11px] mt-1">Sidebar collapse option is in the extension toolbar action icon.</p>
+            <span className="font-semibold text-emerald-300">02. Universal Floating Rail</span>
+            <p className="text-slate-300 text-[11px] mt-1">Leaves host DOM 100% untouched. Toggle via toolbar icon or edge pull-tab (defaults to collapsed).</p>
           </div>
           <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-900/40">
             <span className="font-semibold text-emerald-300">03. Add Any App (+)</span>

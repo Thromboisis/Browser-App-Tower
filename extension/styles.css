@@ -16,7 +16,7 @@
   all: initial;
 }
 
-/* FIRMLY DOCKED SIDEBAR RAIL (Right edge, 44px wide) */
+/* UNIVERSAL FLOATING RAIL (Right edge, floats over page, host DOM 100% untouched) */
 .app-tower-dock {
   pointer-events: auto !important;
   position: fixed !important;
@@ -30,15 +30,14 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  padding: 12px 0 16px 0 !important;
+  padding: 10px 0 16px 0 !important;
   z-index: 2147483645 !important;
   box-sizing: border-box !important;
   user-select: none !important;
   -webkit-font-smoothing: antialiased;
-  box-shadow: none !important;
-  filter: none !important;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.45), -1px 0 6px rgba(0, 0, 0, 0.25) !important;
   will-change: transform;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease !important;
 }
 
 .app-tower-dock.collapsed {
@@ -47,25 +46,82 @@
   pointer-events: none !important;
 }
 
-/* Stationary or synchronized placeholder gutter backdrop with matching sidebar background */
-.app-tower-dock-gutter {
+/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed) */
+.app-tower-edge-tab {
   position: fixed !important;
-  top: 0 !important;
+  top: 50% !important;
   right: 0 !important;
-  width: var(--dock-width, 44px) !important;
-  height: 100vh !important;
+  transform: translateY(-50%) !important;
+  width: 14px !important;
+  height: 52px !important;
   background: var(--bg-primary, #12141a) !important;
-  z-index: 2147483640 !important;
-  pointer-events: none !important;
-  border-left: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08)) !important;
-  box-sizing: border-box !important;
-  will-change: transform, opacity;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12)) !important;
+  border-right: none !important;
+  border-radius: 8px 0 0 8px !important;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 2147483644 !important;
+  pointer-events: auto !important;
+  transition: width 0.18s ease, background 0.18s ease, opacity 0.22s ease, transform 0.22s ease !important;
+  color: var(--text-muted, #94a3b8) !important;
+  user-select: none !important;
 }
 
-.app-tower-dock-gutter.collapsed {
-  transform: translateX(100%) !important;
+.app-tower-edge-tab:hover {
+  width: 22px !important;
+  background: var(--bg-hover, #1e222d) !important;
+  color: #38bdf8 !important;
+  box-shadow: -3px 0 16px rgba(56, 189, 248, 0.25) !important;
+}
+
+.app-tower-edge-tab.hidden {
   opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-50%) translateX(100%) !important;
+}
+
+.app-tower-edge-tab svg {
+  width: 11px !important;
+  height: 11px !important;
+  transition: transform 0.15s ease !important;
+}
+
+.app-tower-edge-tab:hover svg {
+  transform: translateX(-1px) !important;
+}
+
+/* Floating Rail Header and Collapse Button */
+.dock-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+  gap: 3px !important;
+}
+
+.dock-collapse-btn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted, #94a3b8) !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  padding: 0 !important;
+  outline: none !important;
+}
+
+.dock-collapse-btn:hover {
+  background: var(--bg-hover, #1e222d) !important;
+  color: var(--text-primary, #f8fafc) !important;
 }
 
 /* App list container (strictly vertical column) */

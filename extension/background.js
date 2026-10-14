@@ -34,7 +34,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({ app_favicons: {} });
   }
   if (typeof data.dock_collapsed !== 'boolean') {
-    await chrome.storage.local.set({ dock_collapsed: false });
+    await chrome.storage.local.set({ dock_collapsed: true });
   }
 });
 

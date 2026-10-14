@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ICON_16_B64 } from '../data/appTowerIcon';
 import { 
   Pin, 
   ExternalLink, 
@@ -94,13 +95,14 @@ export const LiveSimulator: React.FC = () => {
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   // Independent tab-specific collapse states (each browser tab manages its own collapse state)
+  // Default is COLLAPSED (true) so users only open the dock on tabs where they want it
   const [tabCollapsedStates, setTabCollapsedStates] = useState<Record<string, boolean>>({
-    doc: false,
-    portal: false,
-    dashboard: false,
-    outlook: false,
-    scheduler: false,
-    newtab: false,
+    doc: true,
+    portal: true,
+    dashboard: true,
+    outlook: true,
+    scheduler: true,
+    newtab: true,
   });
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [statusNotification, setStatusNotification] = useState<string | null>(null);
@@ -404,7 +406,7 @@ export const LiveSimulator: React.FC = () => {
     {
       id: '2',
       title: 'Architecture Rules',
-      content: '• Pushes 44px page margin (non-floating rail)\n• Frameless companion windows (zero iframes, zero 403 errors)\n• Independent bounds saved per app\n• Toast says "Updated" on edit, "Added" on new app',
+      content: '• Universal Floating Rail (Leaves host DOM 100% untouched)\n• Frameless companion windows (zero iframes, zero 403 errors)\n• Independent bounds saved per app\n• Toast says "Updated" on edit, "Added" on new app',
       color: 'bg-emerald-950/60 border-emerald-600/40 text-emerald-100',
       pinned: false,
       time: 'Yesterday'
@@ -1017,30 +1019,53 @@ export const LiveSimulator: React.FC = () => {
                   ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/20'
                   : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
               }`}
-              title="Click extension icon in toolbar to toggle sidebar for current tab only (independent per tab)"
+              title={`Click extension toolbar icon to ${isDockCollapsed ? 'expand' : 'collapse'} sidebar for this tab (defaults to collapsed)`}
             >
-              <PanelRight className="w-3.5 h-3.5 text-blue-400" />
+              <img 
+                src={`data:image/png;base64,${ICON_16_B64}`} 
+                alt="App Tower Logo" 
+                className="w-4 h-4 object-contain rounded-xs shrink-0"
+              />
               <span>App Tower ({activeWebsite})</span>
               <span className={`w-1.5 h-1.5 rounded-full ${!isDockCollapsed ? 'bg-emerald-400' : 'bg-slate-500'}`}></span>
             </button>
           </div>
         </div>
 
-        {/* Viewport Area: Webpage + Firmly Docked Rail (Flex layout, strictly non-floating) */}
+        {/* Viewport Area: Full-Width Webpage + Universal Floating Rail (Host DOM 100% untouched) */}
         <div 
           onClick={() => {
             if (contextMenu) setContextMenu(null);
           }}
-          style={{ backgroundColor: dockColor }}
-          className="relative w-full h-[620px] flex overflow-hidden select-none"
+          className="relative w-full h-[620px] flex overflow-hidden select-none bg-slate-950"
         >
-          {/* Main Web Page Content */}
-          <main 
-            style={{
-              transition: 'margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1), flex 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
-            }}
-            className="flex-1 h-full overflow-y-auto text-slate-200 relative bg-slate-950 min-w-0"
-          >
+          {/* Main Web Page Content (True 100% full width, completely untouched by sidebar) */}
+          <main className="w-full h-full overflow-y-auto text-slate-200 relative bg-slate-950">
+            {/* Universal Floating Rail Status Pill */}
+            <div className="absolute top-3.5 right-4 z-20 pointer-events-auto">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-700/70 text-slate-300 text-[11px] shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-medium text-white">Universal Floating Rail</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-slate-400">Host DOM 100% Untouched</span>
+                {isDockCollapsed ? (
+                  <button
+                    onClick={toggleDockFromToolbar}
+                    className="ml-1 text-blue-400 hover:text-blue-300 font-semibold cursor-pointer underline underline-offset-2"
+                  >
+                    Expand Rail
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleDockFromToolbar}
+                    className="ml-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+                  >
+                    Collapse
+                  </button>
+                )}
+              </div>
+            </div>
+
             {activeWebsite === 'newtab' ? (
               /* Active New Tab Experience with Wallpapers & Draggable Applets */
               <div 
@@ -1284,21 +1309,21 @@ export const LiveSimulator: React.FC = () => {
                       <div className="mt-4 text-xs text-slate-300 space-y-3 leading-relaxed">
                         <p>Hi team,</p>
                         <p>
-                          We've verified that the <strong>App Tower Sidebar</strong> now docks cleanly alongside Outlook on the web without hovering over the main page content!
+                          We've switched to a <strong>Universal Floating Rail</strong> that leaves the host page's DOM <strong>completely untouched</strong>!
                         </p>
                         <p>
-                          Both the main Outlook workspace (reading pane, ribbon, message list) and the <strong>"My Day"</strong> floating side pane stop flush at the sidebar margin without overlapping or pushing content off the screen.
+                          Both the main Outlook workspace (reading pane, ribbon, message list) and the <strong>"My Day"</strong> side pane render in their native full layout. Zero margin injection, zero DOM mutations, zero layout shift!
                         </p>
                         <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 text-xs flex flex-col gap-1.5">
                           <div className="flex items-center gap-2 font-medium">
                             <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span>Flush Docking & Tab-Independent Collapse:</span>
+                            <span>Universal Floating Rail Architecture:</span>
                           </div>
                           <ul className="list-disc list-inside text-[11px] text-slate-300 space-y-1 ml-1">
-                            <li><strong>Zero Hovering:</strong> Main email content stops cleanly at the 44px rail boundary; no UI is obscured.</li>
-                            <li><strong>Synchronized Slide-Out:</strong> Page margin and sidebar rail expand & collapse in lockstep with matching 0.35s easing.</li>
-                            <li><strong>Matching Placeholder Color:</strong> The placeholder reservation area shares the exact dark background color of the sidebar.</li>
-                            <li><strong>Tab-Specific Collapse:</strong> Clicking the App Tower button toggles the sidebar for <em>this tab only</em> without collapsing your other browser tabs!</li>
+                            <li><strong>Host DOM Untouched:</strong> No margin manipulation, no style injection, and no MutationObservers on webpage elements.</li>
+                            <li><strong>100% Universal Compatibility:</strong> Works seamlessly on Outlook, Jira, Canvas, GitHub, Docs, and any complex SPA.</li>
+                            <li><strong>Sleek Floating Shadow:</strong> Beautiful floating acrylic rail with smooth GPU-accelerated slide-in animation.</li>
+                            <li><strong>Tab-Specific & Default Collapsed:</strong> Starts collapsed by default; click the toolbar icon or edge pull-tab to reveal on demand!</li>
                           </ul>
                         </div>
                       </div>
@@ -1528,25 +1553,48 @@ export const LiveSimulator: React.FC = () => {
             )}
           </main>
 
-          {/* FIRMLY DOCKED SIDEBAR RAIL (Real flex column on right edge, zero floating) */}
+          {/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed) */}
+          {isDockCollapsed && (
+            <button
+              onClick={toggleDockFromToolbar}
+              style={{ backgroundColor: dockColor }}
+              className="absolute top-1/2 -translate-y-1/2 right-0 w-3.5 hover:w-5 h-14 rounded-l-lg border border-r-0 border-white/15 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 flex items-center justify-center shadow-lg transition-all z-30 cursor-pointer group"
+              title="Open App Tower Floating Rail (Host page DOM is 100% untouched)"
+            >
+              <span className="text-[10px] font-bold group-hover:-translate-x-0.5 transition-transform">‹</span>
+            </button>
+          )}
+
+          {/* UNIVERSAL FLOATING RAIL (Floats on right edge, leaves host page DOM 100% untouched) */}
           <aside
             style={{
-              width: isDockCollapsed ? '0px' : `${dockWidth}px`,
-              minWidth: isDockCollapsed ? '0px' : `${dockWidth}px`,
+              width: `${dockWidth}px`,
               backgroundColor: dockColor,
-              boxShadow: 'none',
-              filter: 'none',
-              transition: 'width 0.35s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease'
+              transform: isDockCollapsed ? 'translateX(100%)' : 'translateX(0)',
+              opacity: isDockCollapsed ? 0 : 1,
+              pointerEvents: isDockCollapsed ? 'none' : 'auto',
+              boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.45), -1px 0 6px rgba(0, 0, 0, 0.25)',
+              transition: 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, background-color 0.15s ease'
             }}
-            className="h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-3 z-30 select-none shadow-none overflow-hidden shrink-0"
+            className="absolute top-0 right-0 h-full border-l border-white/[0.08] flex flex-col items-center justify-between py-2.5 z-40 select-none overflow-hidden"
           >
+            {/* Top Collapse Toggle Button */}
+            <div className="flex flex-col items-center w-full mb-1">
+              <button
+                onClick={toggleDockFromToolbar}
+                className="w-6 h-6 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                title="Collapse Floating Rail (or click toolbar icon)"
+              >
+                <PanelRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* App Icons (Vertical Stack) */}
             <div 
               style={{
                 width: `${dockWidth}px`,
                 opacity: isDockCollapsed ? 0 : 1,
-                transform: isDockCollapsed ? 'translateX(16px)' : 'translateX(0)',
-                transition: 'opacity 0.25s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+                transition: 'opacity 0.2s ease'
               }}
               onDragLeave={(e) => {
                 const related = e.relatedTarget as Node | null;
