@@ -71,7 +71,8 @@
       dockTop = Math.max(minTop, Math.min(maxTop, Math.round(newTop)));
       dock.style.top = `${dockTop}px`;
       if (edgeTab) {
-        edgeTab.style.top = `${dockTop + Math.min(barHeight / 2, 60)}px`;
+        const centerY = dockTop + (barHeight / 2);
+        edgeTab.style.setProperty('top', `${centerY}px`, 'important');
       }
     }
 
@@ -105,18 +106,70 @@
 
     const shadow = host.attachShadow({ mode: 'open' });
 
-    // Sleek Edge Pull Tab when rail is collapsed
+    // Sleek Edge Pull Tab when rail is collapsed (centered on sidebar, draggable vertically)
     const edgeTab = document.createElement('div');
     edgeTab.className = 'app-tower-edge-tab' + (isDockVisible ? ' hidden' : '');
     edgeTab.id = 'app-tower-edge-tab';
-    edgeTab.title = 'Open App Tower Floating Rail';
+    edgeTab.title = 'App Tower Tab (Click to expand, drag vertically to slide)';
     edgeTab.innerHTML = `
+      <div class="edge-tab-grip">
+        <span></span>
+        <span></span>
+      </div>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     `;
+
+    let isDraggingTab = false;
+    let tabDragStartY = 0;
+    let tabDragStartTop = 0;
+    let hasDraggedTab = false;
+
+    function onTabDragStart(e) {
+      if (e.button !== 0) return;
+      isDraggingTab = true;
+      hasDraggedTab = false;
+      tabDragStartY = e.clientY;
+      tabDragStartTop = dockTop;
+      edgeTab.classList.add('dragging');
+
+      window.addEventListener('mousemove', onTabDragMove, { passive: false });
+      window.addEventListener('mouseup', onTabDragEnd);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function onTabDragMove(e) {
+      if (!isDraggingTab) return;
+      const deltaY = e.clientY - tabDragStartY;
+      if (Math.abs(deltaY) > 3) {
+        hasDraggedTab = true;
+      }
+      clampAndApplyDockTop(tabDragStartTop + deltaY);
+      e.preventDefault();
+    }
+
+    function onTabDragEnd() {
+      if (!isDraggingTab) return;
+      isDraggingTab = false;
+      edgeTab.classList.remove('dragging');
+      window.removeEventListener('mousemove', onTabDragMove);
+      window.removeEventListener('mouseup', onTabDragEnd);
+
+      try {
+        sessionStorage.setItem('app_tower_dock_top', String(dockTop));
+      } catch (e) {}
+      chrome.storage.local.set({ dock_top: dockTop });
+    }
+
+    edgeTab.addEventListener('mousedown', onTabDragStart);
     edgeTab.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (hasDraggedTab) {
+        hasDraggedTab = false;
+        return;
+      }
       setDockCollapsed(false);
     });
     shadow.appendChild(edgeTab);
@@ -214,23 +267,25 @@
 
       .app-tower-edge-tab {
         position: fixed !important;
-        top: 50% !important;
         right: 0 !important;
         transform: translateY(-50%) !important;
         width: 14px !important;
-        height: 52px !important;
+        height: 56px !important;
         background: var(--bg-primary, #12141a) !important;
         border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12)) !important;
         border-right: none !important;
         border-radius: 8px 0 0 8px !important;
         box-shadow: none !important;
+        filter: none !important;
         display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
-        cursor: pointer !important;
+        gap: 3px !important;
+        cursor: grab !important;
         z-index: 2147483644 !important;
         pointer-events: auto !important;
-        transition: width 0.18s ease, background 0.18s ease, opacity 0.22s ease, transform 0.22s ease !important;
+        transition: width 0.18s ease, background 0.18s ease, opacity 0.22s ease, border-color 0.18s ease !important;
         color: var(--text-muted, #94a3b8) !important;
         user-select: none !important;
       }
@@ -239,13 +294,41 @@
         width: 22px !important;
         background: var(--bg-hover, #1e222d) !important;
         color: #38bdf8 !important;
+        border-color: rgba(56, 189, 248, 0.4) !important;
         box-shadow: none !important;
+      }
+
+      .app-tower-edge-tab.dragging {
+        cursor: grabbing !important;
+        width: 22px !important;
+        background: #1e222d !important;
+        border-color: rgba(56, 189, 248, 0.6) !important;
+        transition: none !important;
       }
 
       .app-tower-edge-tab.hidden {
         opacity: 0 !important;
         pointer-events: none !important;
         transform: translateY(-50%) translateX(100%) !important;
+      }
+
+      .edge-tab-grip {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+        align-items: center !important;
+        opacity: 0.6 !important;
+      }
+
+      .edge-tab-grip span {
+        width: 3px !important;
+        height: 3px !important;
+        border-radius: 50% !important;
+        background-color: currentColor !important;
+      }
+
+      .app-tower-edge-tab:hover .edge-tab-grip {
+        opacity: 1 !important;
       }
 
       .app-tower-edge-tab svg {

@@ -160,8 +160,15 @@ export const LiveSimulator: React.FC = () => {
       return 60;
     }
   });
+  const [dockHeight, setDockHeight] = useState<number>(220);
   const [isDraggingDock, setIsDraggingDock] = useState(false);
   const dockDragStartRef = useRef<{ startY: number; initialTop: number }>({ startY: 0, initialTop: 60 });
+
+  // Expanding Tab Drag-to-Move State
+  const [isDraggingTab, setIsDraggingTab] = useState(false);
+  const tabDragStartRef = useRef<{ startY: number; initialTop: number }>({ startY: 0, initialTop: 60 });
+  const hasDraggedTabRef = useRef<boolean>(false);
+
   const dockRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -473,6 +480,33 @@ export const LiveSimulator: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeAppId, isPinned, contextMenu, isModalOpen]);
 
+  // Monitor dock height dynamically so the expanding tab stays centered at all times
+  useEffect(() => {
+    const updateH = () => {
+      if (dockRef.current && dockRef.current.offsetHeight > 0) {
+        setDockHeight(dockRef.current.offsetHeight);
+      }
+    };
+    updateH();
+    const t = setTimeout(updateH, 60);
+    return () => clearTimeout(t);
+  }, [apps, isDockCollapsed]);
+
+  useEffect(() => {
+    if (!dockRef.current) return;
+    try {
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect.height > 0) {
+            setDockHeight(entry.contentRect.height);
+          }
+        }
+      });
+      ro.observe(dockRef.current);
+      return () => ro.disconnect();
+    } catch (e) {}
+  }, []);
+
   // Global mouse listeners for Dragging Modal, Dragging Window, and Resizing Window
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -480,10 +514,28 @@ export const LiveSimulator: React.FC = () => {
       if (isDraggingDock) {
         const deltaY = e.clientY - dockDragStartRef.current.startY;
         const containerHeight = viewportRef.current?.clientHeight || 620;
-        const currentDockHeight = dockRef.current?.offsetHeight || 200;
+        const currentDockHeight = dockRef.current?.offsetHeight || dockHeight || 200;
         const minTop = 8;
         const maxTop = Math.max(minTop, containerHeight - currentDockHeight - 8);
         const newTop = Math.max(minTop, Math.min(maxTop, dockDragStartRef.current.initialTop + deltaY));
+        setDockTop(newTop);
+        try {
+          localStorage.setItem('app_tower_dock_top', newTop.toString());
+        } catch (err) {}
+        return;
+      }
+
+      // Expanding tab dragging (slide tab & sidebar up/down while collapsed)
+      if (isDraggingTab) {
+        const deltaY = e.clientY - tabDragStartRef.current.startY;
+        if (Math.abs(deltaY) > 3) {
+          hasDraggedTabRef.current = true;
+        }
+        const containerHeight = viewportRef.current?.clientHeight || 620;
+        const currentDockHeight = dockRef.current?.offsetHeight || dockHeight || 200;
+        const minTop = 8;
+        const maxTop = Math.max(minTop, containerHeight - currentDockHeight - 8);
+        const newTop = Math.max(minTop, Math.min(maxTop, tabDragStartRef.current.initialTop + deltaY));
         setDockTop(newTop);
         try {
           localStorage.setItem('app_tower_dock_top', newTop.toString());
@@ -560,6 +612,9 @@ export const LiveSimulator: React.FC = () => {
       if (isDraggingDock) {
         setIsDraggingDock(false);
       }
+      if (isDraggingTab) {
+        setIsDraggingTab(false);
+      }
       if (isDraggingModal) {
         setIsDraggingModal(false);
       }
@@ -571,7 +626,7 @@ export const LiveSimulator: React.FC = () => {
       }
     };
 
-    if (isDragging || isResizing || isDraggingModal || isDraggingDock) {
+    if (isDragging || isResizing || isDraggingModal || isDraggingDock || isDraggingTab) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -580,7 +635,7 @@ export const LiveSimulator: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, isDraggingModal, isDraggingDock, activeAppId, apps]);
+  }, [isDragging, isResizing, isDraggingModal, isDraggingDock, isDraggingTab, dockHeight, activeAppId, apps]);
 
   const activeApp = apps.find(a => a.id === activeAppId) || null;
 
@@ -1586,21 +1641,50 @@ export const LiveSimulator: React.FC = () => {
             )}
           </main>
 
-          {/* SLEEK FLOATING EDGE PULL-TAB (Visible on right edge when rail is collapsed, zero drop shadow) */}
+          {/* SLEEK FLOATING EDGE PULL-TAB (Centered vertically on sidebar, draggable vertically to slide, zero drop shadow) */}
           {isDockCollapsed && (
-            <button
-              onClick={toggleDockFromToolbar}
+            <div
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                setIsDraggingTab(true);
+                hasDraggedTabRef.current = false;
+                tabDragStartRef.current = {
+                  startY: e.clientY,
+                  initialTop: dockTop
+                };
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (hasDraggedTabRef.current) {
+                  hasDraggedTabRef.current = false;
+                  return;
+                }
+                toggleDockFromToolbar();
+              }}
               style={{ 
                 backgroundColor: dockColor,
-                top: `${dockTop + 20}px`,
+                top: `${dockTop + (dockHeight / 2)}px`,
+                transform: 'translateY(-50%)',
                 boxShadow: 'none',
-                filter: 'none'
+                filter: 'none',
+                transition: isDraggingTab
+                  ? 'width 0.15s ease, background-color 0.15s ease, border-color 0.15s ease'
+                  : 'top 0.22s cubic-bezier(0.16, 1, 0.3, 1), width 0.15s ease, background-color 0.15s ease, border-color 0.15s ease'
               }}
-              className="absolute right-0 w-3.5 hover:w-5 h-12 rounded-l-lg border border-r-0 border-white/15 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 flex items-center justify-center transition-all z-30 cursor-pointer group"
-              title="Open App Tower Floating Rail (Host page DOM is 100% untouched)"
+              className={`absolute right-0 w-3.5 hover:w-5 h-14 rounded-l-xl border border-r-0 border-white/15 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 flex flex-col items-center justify-center gap-1 z-30 select-none group ${
+                isDraggingTab ? 'cursor-grabbing w-5 border-blue-500/60 bg-slate-800' : 'cursor-grab hover:bg-white/10'
+              }`}
+              title="App Tower Tab (Click to expand sidebar, drag vertically to slide)"
             >
-              <span className="text-[10px] font-bold group-hover:-translate-x-0.5 transition-transform">‹</span>
-            </button>
+              {/* Grip Dots */}
+              <div className="flex flex-col items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-blue-400" />
+                <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-blue-400" />
+              </div>
+              <span className="text-[10px] font-bold group-hover:-translate-x-0.5 transition-transform leading-none">‹</span>
+            </div>
           )}
 
           {/* UNIVERSAL FLOATING RAIL (Floating island: grows/shrinks with apps, draggable edge & top handle, transparent where no icons, zero drop shadow) */}
