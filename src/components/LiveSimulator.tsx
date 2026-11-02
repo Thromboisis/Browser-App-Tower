@@ -382,19 +382,71 @@ export const LiveSimulator: React.FC = () => {
 
         // Auto IP fallback (only if user has not configured a custom ZIP)
         if (!isCustom && !userZip) {
+          let foundAuto = false;
+          // 1. Try ipwho.is
           try {
-            const ipRes = await fetch('https://ipapi.co/json/');
+            const ipRes = await fetch('https://ipwho.is/');
             if (ipRes.ok) {
               const ipData = await ipRes.json();
-              if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
+              if (ipData && ipData.success !== false && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
                 lat = ipData.latitude;
                 lon = ipData.longitude;
                 const region = ipData.region_code || ipData.region || '';
-                city = ipData.city ? (region ? `${ipData.city}, ${region}` : ipData.city) : 'Local';
-                if (ipData.timezone) tz = ipData.timezone;
+                city = ipData.city ? (region ? `${ipData.city}, ${region}` : ipData.city) : (ipData.country || 'Local');
+                if (ipData.timezone && ipData.timezone.id) tz = ipData.timezone.id;
+                foundAuto = true;
               }
             }
           } catch (e) {}
+
+          // 2. Try geojs.io
+          if (!foundAuto) {
+            try {
+              const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                const gLat = parseFloat(geoData.latitude);
+                const gLon = parseFloat(geoData.longitude);
+                if (!isNaN(gLat) && !isNaN(gLon)) {
+                  lat = gLat;
+                  lon = gLon;
+                  const region = geoData.region || '';
+                  city = geoData.city ? (region ? `${geoData.city}, ${region}` : geoData.city) : (geoData.country || 'Local');
+                  if (geoData.timezone) tz = geoData.timezone;
+                  foundAuto = true;
+                }
+              }
+            } catch (e) {}
+          }
+
+          // 3. Try ipapi.co
+          if (!foundAuto) {
+            try {
+              const ipRes = await fetch('https://ipapi.co/json/');
+              if (ipRes.ok) {
+                const ipData = await ipRes.json();
+                if (ipData && !ipData.error && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
+                  lat = ipData.latitude;
+                  lon = ipData.longitude;
+                  const region = ipData.region_code || ipData.region || '';
+                  city = ipData.city ? (region ? `${ipData.city}, ${region}` : ipData.city) : 'Local';
+                  if (ipData.timezone) tz = ipData.timezone;
+                  foundAuto = true;
+                }
+              }
+            } catch (e) {}
+          }
+
+          // 4. Client-side Intl timezone fallback
+          if (!foundAuto) {
+            try {
+              const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              if (localTz) {
+                city = localTz.split('/').pop()?.replace(/_/g, ' ') || 'Local';
+                tz = localTz;
+              }
+            } catch (e) {}
+          }
         }
 
         setUserLocation(city);

@@ -333,6 +333,64 @@
 
   let latestWeatherRequestId = 0;
 
+  // Resilient multi-source Auto-IP locator (handles rate-limiting, CORS, and fallbacks)
+  async function detectAutoIpLocation() {
+    // 1. Try ipwho.is (CORS open, fast, accurate)
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success !== false && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          const region = data.region_code || data.region || '';
+          const city = data.city ? (region ? `${data.city}, ${region}` : data.city) : (data.country || 'Local');
+          const tz = data.timezone && data.timezone.id ? data.timezone.id : '';
+          return { lat: data.latitude, lon: data.longitude, city, tz };
+        }
+      }
+    } catch (e) {}
+
+    // 2. Try geojs.io (Free open-source GEO IP, CORS open, zero rate-limits)
+    try {
+      const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+      if (res.ok) {
+        const data = await res.json();
+        const lat = parseFloat(data.latitude);
+        const lon = parseFloat(data.longitude);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          const region = data.region || '';
+          const city = data.city ? (region ? `${data.city}, ${region}` : data.city) : (data.country || 'Local');
+          const tz = data.timezone || '';
+          return { lat, lon, city, tz };
+        }
+      }
+    } catch (e) {}
+
+    // 3. Try ipapi.co
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && !data.error && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          const region = data.region_code || data.region || '';
+          const city = data.city ? (region ? `${data.city}, ${region}` : data.city) : 'Local';
+          const tz = data.timezone || '';
+          return { lat: data.latitude, lon: data.longitude, city, tz };
+        }
+      }
+    } catch (e) {}
+
+    // 4. Local browser Intl timezone fallback
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if (tz) {
+        const cityName = tz.split('/').pop().replace(/_/g, ' ');
+        return { lat: 40.7128, lon: -74.0060, city: cityName, tz };
+      }
+    } catch (e) {}
+
+    return { lat: 40.7128, lon: -74.0060, city: 'Local Area', tz: '' };
+  }
+
   // 5. Live Weather with Open-Meteo & Geo-IP or Custom ZIP Code
   async function fetchLiveWeather() {
     const currentRequestId = ++latestWeatherRequestId;
@@ -345,7 +403,7 @@
       let isCustom = false;
 
       // Always read current custom ZIP from settings or fallback to cached synchronous storage
-      const userZip = (settings.custom_zip || getCachedZip()).trim();
+      const userZip = (typeof settings.custom_zip === 'string' ? settings.custom_zip : getCachedZip()).trim();
 
       if (userZip) {
         if (zipStatusMsg) zipStatusMsg.className = 'zip-status-msg is-loading';
@@ -408,25 +466,16 @@
           }
           return;
         }
-      }
+      } else {
+        // Auto IP mode
+        if (zipStatusMsg) zipStatusMsg.className = 'zip-status-msg is-loading';
+        if (zipStatusText) zipStatusText.textContent = 'Detecting location via IP...';
 
-      // If user has NO custom ZIP, use Auto IP
-      if (!isCustom && !userZip) {
-        try {
-          const ipRes = await fetch('https://ipapi.co/json/');
-          if (ipRes.ok) {
-            const ipData = await ipRes.json();
-            if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
-              lat = ipData.latitude;
-              lon = ipData.longitude;
-              const region = ipData.region_code || ipData.region || '';
-              city = ipData.city ? (region ? `${ipData.city}, ${region}` : ipData.city) : 'Local';
-              if (ipData.timezone) tz = ipData.timezone;
-            }
-          }
-        } catch (e) {
-          // Default fallback coordinates NYC
-        }
+        const autoLoc = await detectAutoIpLocation();
+        lat = autoLoc.lat;
+        lon = autoLoc.lon;
+        city = autoLoc.city;
+        if (autoLoc.tz) tz = autoLoc.tz;
       }
 
       // Check request sequence before updating DOM
