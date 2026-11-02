@@ -380,8 +380,8 @@ export const LiveSimulator: React.FC = () => {
           }
         }
 
-        // Auto IP fallback
-        if (!isCustom) {
+        // Auto IP fallback (only if user has not configured a custom ZIP)
+        if (!isCustom && !userZip) {
           try {
             const ipRes = await fetch('https://ipapi.co/json/');
             if (ipRes.ok) {

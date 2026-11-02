@@ -60,7 +60,16 @@
   const inputSidebarWidth = document.getElementById('input-sidebar-width');
   const labelSidebarWidth = document.getElementById('label-sidebar-width');
   const colorSwatches = document.querySelectorAll('.color-swatch');
-  const inputCustomColor = document.getElementById('input-custom-color');
+  // Helper to read cached ZIP synchronously on page boot
+  function getCachedZip() {
+    try {
+      return (localStorage.getItem('app_tower_custom_zip') || '').trim();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  const initialCachedZip = getCachedZip();
 
   // State
   let settings = {
@@ -71,7 +80,7 @@
     blur_bg: false, // Crisp high-definition wallpaper by default!
     show_clock: true,
     show_weather: true,
-    custom_zip: '', // Custom ZIP code for weather & time (empty for Auto IP)
+    custom_zip: initialCachedZip, // Custom ZIP code for weather & time (empty for Auto IP)
     clock_pos: { x: 60, y: 80 },
     weather_pos: { x: 60, y: 250 },
     dock_width: 44,
@@ -117,7 +126,16 @@
       if (typeof data.blur_bg === 'boolean') settings.blur_bg = data.blur_bg;
       if (typeof data.show_clock === 'boolean') settings.show_clock = data.show_clock;
       if (typeof data.show_weather === 'boolean') settings.show_weather = data.show_weather;
-      if (typeof data.custom_zip === 'string') settings.custom_zip = data.custom_zip;
+      if (typeof data.custom_zip === 'string') {
+        settings.custom_zip = data.custom_zip.trim();
+        try {
+          if (settings.custom_zip) {
+            localStorage.setItem('app_tower_custom_zip', settings.custom_zip);
+          } else {
+            localStorage.removeItem('app_tower_custom_zip');
+          }
+        } catch (e) {}
+      }
       if (data.clock_pos && typeof data.clock_pos.x === 'number') settings.clock_pos = data.clock_pos;
       if (data.weather_pos && typeof data.weather_pos.x === 'number') settings.weather_pos = data.weather_pos;
       if (typeof data.dock_width === 'number') settings.dock_width = data.dock_width;
@@ -236,6 +254,33 @@
   let resolvedCity = '';
   let resolvedTimezone = '';
 
+  // Synchronously restore cached location for this ZIP if available so UI doesn't flicker or show Auto IP
+  try {
+    const cachedLocRaw = localStorage.getItem('app_tower_cached_loc');
+    if (cachedLocRaw) {
+      const cached = JSON.parse(cachedLocRaw);
+      if (cached && (initialCachedZip ? cached.zip === initialCachedZip : !cached.zip)) {
+        if (cached.city) {
+          resolvedCity = cached.city;
+          if (clockLocText) clockLocText.textContent = resolvedCity;
+          if (weatherCityBadge) weatherCityBadge.textContent = resolvedCity;
+        }
+        if (cached.tz) {
+          resolvedTimezone = cached.tz;
+        }
+        if (cached.temp && weatherTempVal) {
+          weatherTempVal.textContent = `${cached.temp}°F`;
+        }
+        if (cached.condition && weatherConditionText) {
+          weatherConditionText.textContent = cached.condition;
+        }
+      }
+    } else if (initialCachedZip) {
+      if (clockLocText) clockLocText.textContent = `ZIP ${initialCachedZip}`;
+      if (weatherCityBadge) weatherCityBadge.textContent = `ZIP ${initialCachedZip}`;
+    }
+  } catch (e) {}
+
   function updateClock() {
     const now = new Date();
 
@@ -286,8 +331,12 @@
   updateClock();
   setInterval(updateClock, 1000);
 
+  let latestWeatherRequestId = 0;
+
   // 5. Live Weather with Open-Meteo & Geo-IP or Custom ZIP Code
   async function fetchLiveWeather() {
+    const currentRequestId = ++latestWeatherRequestId;
+
     try {
       let lat = 40.7128;
       let lon = -74.0060;
@@ -295,7 +344,8 @@
       let tz = '';
       let isCustom = false;
 
-      const userZip = (settings.custom_zip || '').trim();
+      // Always read current custom ZIP from settings or fallback to cached synchronous storage
+      const userZip = (settings.custom_zip || getCachedZip()).trim();
 
       if (userZip) {
         if (zipStatusMsg) zipStatusMsg.className = 'zip-status-msg is-loading';
@@ -347,13 +397,21 @@
         }
 
         if (!geoSuccess) {
+          if (currentRequestId !== latestWeatherRequestId) return;
           if (zipStatusMsg) zipStatusMsg.className = 'zip-status-msg is-error';
-          if (zipStatusText) zipStatusText.textContent = `ZIP "${userZip}" not found. Falling back to Auto IP...`;
+          if (zipStatusText) zipStatusText.textContent = `ZIP "${userZip}" not found.`;
+          // If a custom zip was entered by the user, do NOT wipe it out with Auto IP!
+          if (!resolvedCity) {
+            resolvedCity = `ZIP ${userZip}`;
+            if (clockLocText) clockLocText.textContent = resolvedCity;
+            if (weatherCityBadge) weatherCityBadge.textContent = resolvedCity;
+          }
+          return;
         }
       }
 
-      // If no custom ZIP or custom ZIP lookup failed, use Auto IP
-      if (!isCustom) {
+      // If user has NO custom ZIP, use Auto IP
+      if (!isCustom && !userZip) {
         try {
           const ipRes = await fetch('https://ipapi.co/json/');
           if (ipRes.ok) {
@@ -371,6 +429,9 @@
         }
       }
 
+      // Check request sequence before updating DOM
+      if (currentRequestId !== latestWeatherRequestId) return;
+
       resolvedCity = city;
       if (clockLocText) {
         clockLocText.textContent = city;
@@ -385,6 +446,11 @@
       if (!res.ok) throw new Error('Weather fetch failed');
       const data = await res.json();
 
+      if (currentRequestId !== latestWeatherRequestId) return;
+
+      let currentTemp = 72;
+      let weatherInfo = null;
+
       if (data) {
         if (data.timezone) {
           resolvedTimezone = data.timezone;
@@ -397,14 +463,14 @@
 
         if (data.current_weather) {
           const current = data.current_weather;
-          const temp = Math.round(current.temperature);
+          currentTemp = Math.round(current.temperature);
           const code = current.weathercode;
           const wind = Math.round(current.windspeed);
 
-          if (weatherTempVal) weatherTempVal.textContent = `${temp}°F`;
+          if (weatherTempVal) weatherTempVal.textContent = `${currentTemp}°F`;
           if (weatherWindText) weatherWindText.textContent = `Wind: ${wind} mph`;
 
-          const weatherInfo = mapWeatherCode(code);
+          weatherInfo = mapWeatherCode(code);
           if (weatherConditionText) weatherConditionText.textContent = weatherInfo.condition;
           if (weatherIconContainer) weatherIconContainer.innerHTML = weatherInfo.svg;
 
@@ -414,6 +480,17 @@
           }
         }
       }
+
+      // Cache resolved data to localStorage for instant flicker-free load on refresh/newtab
+      try {
+        localStorage.setItem('app_tower_cached_loc', JSON.stringify({
+          zip: userZip,
+          city,
+          tz: resolvedTimezone,
+          temp: currentTemp,
+          condition: weatherInfo ? weatherInfo.condition : ''
+        }));
+      } catch (e) {}
 
       // Update status text in settings modal
       if (isCustom) {
@@ -426,10 +503,13 @@
         if (zipStatusText) zipStatusText.textContent = `Auto IP: ${city}${tzLabel}`;
       }
     } catch (err) {
-      if (clockLocText) clockLocText.textContent = 'Current Time';
-      if (weatherCityBadge) weatherCityBadge.textContent = 'Weather';
-      if (weatherTempVal) weatherTempVal.textContent = '72°F';
-      if (weatherConditionText) weatherConditionText.textContent = 'Fair';
+      if (currentRequestId !== latestWeatherRequestId) return;
+      if (!resolvedCity) {
+        if (clockLocText) clockLocText.textContent = 'Current Time';
+        if (weatherCityBadge) weatherCityBadge.textContent = 'Weather';
+        if (weatherTempVal) weatherTempVal.textContent = '72°F';
+        if (weatherConditionText) weatherConditionText.textContent = 'Fair';
+      }
     }
   }
 
@@ -471,7 +551,7 @@
     };
   }
 
-  fetchLiveWeather();
+  // Refresh live weather periodically (initial fetch is safely called inside loadSettings)
   setInterval(fetchLiveWeather, 15 * 60 * 1000);
 
   // 6. Draggable Applets Behavior
@@ -730,6 +810,14 @@
     if (!inputCustomZip) return;
     const val = inputCustomZip.value.trim();
     settings.custom_zip = val;
+    try {
+      if (val) {
+        localStorage.setItem('app_tower_custom_zip', val);
+      } else {
+        localStorage.removeItem('app_tower_custom_zip');
+        localStorage.removeItem('app_tower_cached_loc');
+      }
+    } catch (e) {}
     chrome.storage.local.set({ custom_zip: val });
     fetchLiveWeather();
   }
@@ -780,6 +868,10 @@
     btnResetZip.addEventListener('click', () => {
       if (inputCustomZip) inputCustomZip.value = '';
       settings.custom_zip = '';
+      try {
+        localStorage.removeItem('app_tower_custom_zip');
+        localStorage.removeItem('app_tower_cached_loc');
+      } catch (e) {}
       chrome.storage.local.set({ custom_zip: '' });
       fetchLiveWeather();
     });
@@ -866,14 +958,29 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local') {
       let shouldReapply = false;
+      let shouldRefetchWeather = false;
       for (const [key, change] of Object.entries(changes)) {
         if (key in settings) {
           settings[key] = change.newValue;
           shouldReapply = true;
+          if (key === 'custom_zip') {
+            try {
+              if (change.newValue) {
+                localStorage.setItem('app_tower_custom_zip', change.newValue);
+              } else {
+                localStorage.removeItem('app_tower_custom_zip');
+                localStorage.removeItem('app_tower_cached_loc');
+              }
+            } catch (e) {}
+            shouldRefetchWeather = true;
+          }
         }
       }
       if (shouldReapply) {
         applySettingsToUI();
+      }
+      if (shouldRefetchWeather) {
+        fetchLiveWeather();
       }
     }
   });
