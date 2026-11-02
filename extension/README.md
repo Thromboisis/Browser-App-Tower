@@ -53,6 +53,10 @@ A Chrome extension replicating the Microsoft Edge "App Tower" docked sidebar wit
 10. **Smart "Save App" Change Detection**:
    - The "Save App" button only activates if genuine modifications were made compared to the currently saved settings (e.g. toggling mobile and toggling back resets to inactive).
 
+11. **New Tab Page with Custom ZIP Code for Weather & Clock**:
+   - Optional companion new tab page with search engine choices, wallpapers, and draggable Live Clock and Live Weather cards.
+   - **Custom ZIP Code Support**: Set a custom US ZIP code or postal code in settings (or by clicking the location badge on either applet) to ensure accurate local weather forecasts and clock timezone, overcoming inaccurate IP geolocation. Easily switch back to Auto IP anytime with one click.
+
 ## Note on Restricted Chrome Pages
 
 Google Chrome has a built-in security policy that **strictly prevents all extensions from injecting content scripts into certain internal and Google pages**:

@@ -222,6 +222,24 @@ export const LiveSimulator: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [userLocation, setUserLocation] = useState('San Francisco, CA');
   const [userWeather, setUserWeather] = useState({ temp: 68, condition: 'Partly Cloudy', wind: 8, humidity: 55 });
+  const [customZip, setCustomZip] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app_tower_custom_zip') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [zipInputVal, setZipInputVal] = useState<string>(() => {
+    try {
+      return localStorage.getItem('app_tower_custom_zip') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [zipStatusText, setZipStatusText] = useState<string>('Detecting location automatically...');
+  const [zipStatusType, setZipStatusType] = useState<'loading' | 'custom' | 'auto' | 'error'>('auto');
+  const [resolvedTimezone, setResolvedTimezone] = useState<string>('');
+  const zipInputRef = useRef<HTMLInputElement | null>(null);
 
   // Draggable state for Clock & Weather applets inside Simulator
   const [draggingApplet, setDraggingApplet] = useState<'clock' | 'weather' | null>(null);
@@ -300,42 +318,131 @@ export const LiveSimulator: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Attempt location & weather fetch
+    // Attempt location & weather fetch based on custom ZIP code or Auto IP
     const fetchLoc = async () => {
       try {
-        const ipRes = await fetch('https://ipapi.co/json/');
-        if (ipRes.ok) {
-          const ipData = await ipRes.json();
-          if (ipData.city) {
-            setUserLocation(`${ipData.city}${ipData.region_code ? ', ' + ipData.region_code : ''}`);
+        let lat = 40.7128;
+        let lon = -74.0060;
+        let city = 'New York';
+        let tz = '';
+        let isCustom = false;
+
+        const userZip = customZip.trim();
+
+        if (userZip) {
+          setZipStatusType('loading');
+          setZipStatusText(`Resolving location for "${userZip}"...`);
+
+          let geoSuccess = false;
+
+          // 1. Try US 5-digit ZIP via zippopotam.us
+          if (/^\d{5}$/.test(userZip)) {
+            try {
+              const zipRes = await fetch(`https://api.zippopotam.us/us/${userZip}`);
+              if (zipRes.ok) {
+                const zipData = await zipRes.json();
+                if (zipData && Array.isArray(zipData.places) && zipData.places.length > 0) {
+                  const place = zipData.places[0];
+                  lat = parseFloat(place.latitude);
+                  lon = parseFloat(place.longitude);
+                  city = `${place['place name']}, ${place['state abbreviation']}`;
+                  geoSuccess = true;
+                  isCustom = true;
+                }
+              }
+            } catch (e) {}
           }
-          if (ipData.latitude && ipData.longitude) {
-            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${ipData.latitude}&longitude=${ipData.longitude}&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph`);
-            if (wRes.ok) {
-              const wData = await wRes.json();
-              if (wData.current_weather) {
-                setUserWeather({
-                  temp: Math.round(wData.current_weather.temperature),
-                  condition: wData.current_weather.weathercode === 0 ? 'Clear Sky' : 'Partly Cloudy',
-                  wind: Math.round(wData.current_weather.windspeed),
-                  humidity: 55
-                });
+
+          // 2. Open-Meteo geocoding search fallback
+          if (!geoSuccess) {
+            try {
+              const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(userZip)}&count=1&language=en&format=json`;
+              const geoRes = await fetch(geoUrl);
+              if (geoRes.ok) {
+                const geoData = await geoRes.json();
+                if (geoData && Array.isArray(geoData.results) && geoData.results.length > 0) {
+                  const r = geoData.results[0];
+                  lat = r.latitude;
+                  lon = r.longitude;
+                  const stateOrCountry = r.admin1 || (r.country_code ? r.country_code.toUpperCase() : '');
+                  city = stateOrCountry ? `${r.name}, ${stateOrCountry}` : r.name;
+                  if (r.timezone) tz = r.timezone;
+                  geoSuccess = true;
+                  isCustom = true;
+                }
+              }
+            } catch (e) {}
+          }
+
+          if (!geoSuccess) {
+            setZipStatusType('error');
+            setZipStatusText(`ZIP "${userZip}" not found. Falling back to Auto IP...`);
+          }
+        }
+
+        // Auto IP fallback
+        if (!isCustom) {
+          try {
+            const ipRes = await fetch('https://ipapi.co/json/');
+            if (ipRes.ok) {
+              const ipData = await ipRes.json();
+              if (ipData && typeof ipData.latitude === 'number' && typeof ipData.longitude === 'number') {
+                lat = ipData.latitude;
+                lon = ipData.longitude;
+                const region = ipData.region_code || ipData.region || '';
+                city = ipData.city ? (region ? `${ipData.city}, ${region}` : ipData.city) : 'Local';
+                if (ipData.timezone) tz = ipData.timezone;
               }
             }
+          } catch (e) {}
+        }
+
+        setUserLocation(city);
+
+        // Fetch live weather and timezone from open-meteo
+        const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=relativehumidity_2m&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto`);
+        if (wRes.ok) {
+          const wData = await wRes.json();
+          const detectedTz = wData.timezone || tz || '';
+          if (detectedTz) {
+            setResolvedTimezone(detectedTz);
+          }
+
+          if (wData.current_weather) {
+            const code = wData.current_weather.weathercode;
+            let condition = 'Partly Cloudy';
+            if (code === 0) condition = 'Clear Sky';
+            else if (code >= 51 && code <= 67) condition = 'Rain Showers';
+            else if (code >= 71 && code <= 77) condition = 'Snow';
+            else if (code >= 80 && code <= 99) condition = 'Thunderstorm';
+            else if (code >= 45 && code <= 48) condition = 'Foggy';
+
+            const humidity = (wData.hourly && wData.hourly.relativehumidity_2m && wData.hourly.relativehumidity_2m[0]) || 55;
+
+            setUserWeather({
+              temp: Math.round(wData.current_weather.temperature),
+              condition,
+              wind: Math.round(wData.current_weather.windspeed),
+              humidity
+            });
+          }
+
+          if (isCustom) {
+            setZipStatusType('custom');
+            const tzLabel = detectedTz ? ` (${detectedTz})` : '';
+            setZipStatusText(`Custom ZIP ${userZip}: ${city}${tzLabel}`);
+          } else if (!userZip) {
+            setZipStatusType('auto');
+            const tzLabel = detectedTz ? ` (${detectedTz})` : '';
+            setZipStatusText(`Auto IP: ${city}${tzLabel}`);
           }
         }
       } catch (e) {
-        try {
-          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          if (tz) {
-            const city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Local';
-            setUserLocation(city);
-          }
-        } catch (err) {}
+        setUserLocation('San Francisco, CA');
       }
     };
     fetchLoc();
-  }, []);
+  }, [customZip]);
 
   // Persist settings changes to localStorage
   useEffect(() => {
@@ -1207,20 +1314,67 @@ export const LiveSimulator: React.FC = () => {
                           <GripVertical className="w-3.5 h-3.5 text-slate-500" />
                           <span>Live Clock</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[10.5px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsConfigModalOpen(true);
+                            setTimeout(() => zipInputRef.current?.focus(), 100);
+                          }}
+                          className="flex items-center gap-1 text-[10.5px] text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-full truncate max-w-[120px] transition cursor-pointer"
+                          title="Click to configure location / ZIP code"
+                        >
                           <MapPin className="w-2.5 h-2.5" />
                           <span className="truncate">{userLocation}</span>
-                        </div>
+                        </button>
                       </div>
                       <div className="p-3.5 text-center flex flex-col items-center">
-                        <div className="text-3xl font-light tracking-tight text-white font-mono flex items-baseline gap-1">
-                          <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/\s?[AP]M/i, '')}</span>
-                          <span className="text-xs font-bold text-blue-400">
-                            {currentTime.getHours() >= 12 ? 'PM' : 'AM'}
-                          </span>
-                        </div>
+                        {(() => {
+                          if (resolvedTimezone) {
+                            try {
+                              const parts = new Intl.DateTimeFormat('en-US', {
+                                timeZone: resolvedTimezone,
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              }).formatToParts(currentTime);
+                              const h = parts.find(p => p.type === 'hour')?.value || '12';
+                              const m = parts.find(p => p.type === 'minute')?.value || '00';
+                              const ampm = parts.find(p => p.type === 'dayPeriod')?.value?.toUpperCase() || 'AM';
+                              return (
+                                <div className="text-3xl font-light tracking-tight text-white font-mono flex items-baseline gap-1">
+                                  <span>{h}:{m}</span>
+                                  <span className="text-xs font-bold text-blue-400">{ampm}</span>
+                                </div>
+                              );
+                            } catch (e) {}
+                          }
+                          return (
+                            <div className="text-3xl font-light tracking-tight text-white font-mono flex items-baseline gap-1">
+                              <span>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/\s?[AP]M/i, '')}</span>
+                              <span className="text-xs font-bold text-blue-400">
+                                {currentTime.getHours() >= 12 ? 'PM' : 'AM'}
+                              </span>
+                            </div>
+                          );
+                        })()}
                         <div className="text-[11px] font-medium text-slate-400 mt-0.5">
-                          {currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                          {resolvedTimezone ? (
+                            (() => {
+                              try {
+                                return new Intl.DateTimeFormat('en-US', {
+                                  timeZone: resolvedTimezone,
+                                  weekday: 'long',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }).format(currentTime);
+                              } catch (e) {
+                                return currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+                              }
+                            })()
+                          ) : (
+                            currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1246,9 +1400,18 @@ export const LiveSimulator: React.FC = () => {
                           <GripVertical className="w-3.5 h-3.5 text-slate-500" />
                           <span>Live Weather</span>
                         </div>
-                        <div className="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full truncate max-w-[110px]">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsConfigModalOpen(true);
+                            setTimeout(() => zipInputRef.current?.focus(), 100);
+                          }}
+                          className="text-[10px] text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-full truncate max-w-[110px] transition cursor-pointer"
+                          title="Click to configure location / ZIP code"
+                        >
                           {userLocation}
-                        </div>
+                        </button>
                       </div>
                       <div className="p-3.5 space-y-2">
                         <div className="flex items-center gap-3">
@@ -2206,7 +2369,7 @@ export const LiveSimulator: React.FC = () => {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
                   <div>
                     <span className="font-semibold text-slate-200 text-xs block">Live Weather Applet</span>
-                    <span className="text-[10.5px] text-slate-400">Draggable modal with IP/location weather</span>
+                    <span className="text-[10.5px] text-slate-400">Draggable modal with IP/location or custom ZIP weather</span>
                   </div>
                   <button
                     onClick={() => setShowWeatherApplet(!showWeatherApplet)}
@@ -2216,6 +2379,76 @@ export const LiveSimulator: React.FC = () => {
                   >
                     <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
                   </button>
+                </div>
+
+                {/* 5. Location & Weather ZIP Code Setting */}
+                <div className="space-y-2 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div>
+                    <span className="font-semibold text-slate-200 text-xs block">Location & Weather ZIP Code</span>
+                    <span className="text-[10.5px] text-slate-400 leading-relaxed block mt-0.5">
+                      Set your US ZIP code (or postal code) to pinpoint your exact local weather forecast and clock timezone, especially if your internet provider gives an inaccurate location.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <input 
+                      ref={zipInputRef}
+                      type="text" 
+                      value={zipInputVal}
+                      onChange={(e) => setZipInputVal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = zipInputVal.trim();
+                          setCustomZip(val);
+                          try {
+                            localStorage.setItem('app_tower_custom_zip', val);
+                          } catch (err) {}
+                          showNotification(val ? `Applying ZIP ${val}` : 'Reset to Auto IP');
+                        }
+                      }}
+                      placeholder="e.g. 90210 or 10001 (Blank for Auto IP)"
+                      maxLength={20}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 font-mono outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = zipInputVal.trim();
+                        setCustomZip(val);
+                        try {
+                          localStorage.setItem('app_tower_custom_zip', val);
+                        } catch (err) {}
+                        showNotification(val ? `Applying ZIP ${val}` : 'Reset to Auto IP');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition cursor-pointer shrink-0"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setZipInputVal('');
+                        setCustomZip('');
+                        try {
+                          localStorage.removeItem('app_tower_custom_zip');
+                        } catch (err) {}
+                        showNotification('Reset to Auto IP');
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition cursor-pointer shrink-0"
+                      title="Reset to automatic IP detection"
+                    >
+                      Auto IP
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-black/30 border border-white/5 text-[11px] text-slate-400">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      zipStatusType === 'loading' ? 'bg-amber-400 animate-pulse' :
+                      zipStatusType === 'custom' ? 'bg-emerald-400' :
+                      zipStatusType === 'error' ? 'bg-rose-400' :
+                      'bg-blue-400'
+                    }`} />
+                    <span className="truncate">{zipStatusText}</span>
+                  </div>
                 </div>
 
                 {/* 5. Extension Setting: New Tab Override */}

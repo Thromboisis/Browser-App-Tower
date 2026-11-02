@@ -38,7 +38,7 @@
         </svg>
       </div>
       <span class="applet-title">Live Clock</span>
-      <div class="applet-header-badge" id="clock-loc-badge">
+      <div class="applet-header-badge clickable" id="clock-loc-badge" title="Click to change location or ZIP code">
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
           <circle cx="12" cy="10" r="3"></circle>
@@ -69,7 +69,7 @@
         </svg>
       </div>
       <span class="applet-title">Live Weather</span>
-      <div class="applet-header-badge">
+      <div class="applet-header-badge clickable" id="weather-loc-badge" title="Click to change location or ZIP code">
         <span id="weather-city-badge">Locating...</span>
       </div>
     </div>
@@ -260,12 +260,35 @@
         <div class="setting-header-row">
           <div>
             <span class="setting-title">Live Weather Applet</span>
-            <p class="setting-desc">Draggable live weather card using IP location.</p>
+            <p class="setting-desc">Draggable live weather card using IP location or custom ZIP code.</p>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="toggle-weather-applet" checked>
             <span class="slider"></span>
           </label>
+        </div>
+      </div>
+
+      <!-- 5. Location & Weather ZIP Code Setting -->
+      <div class="setting-section" id="section-zip-code">
+        <span class="setting-title">Location & Weather ZIP Code</span>
+        <p class="setting-desc">Set your US ZIP code (or postal code) to pinpoint your exact local weather forecast and clock timezone, especially if your internet provider's IP location is inaccurate.</p>
+        <div class="zip-input-row">
+          <input 
+            type="text" 
+            id="input-custom-zip" 
+            class="setting-text-input zip-input" 
+            placeholder="e.g. 90210 or 10001 (Leave blank for Auto IP)" 
+            maxlength="20"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button type="button" id="btn-save-zip" class="btn-zip-apply" title="Save and update weather and time">Apply</button>
+          <button type="button" id="btn-reset-zip" class="btn-zip-clear" title="Reset to automatic IP location detection">Auto IP</button>
+        </div>
+        <div id="zip-status-msg" class="zip-status-msg">
+          <span class="zip-status-dot"></span>
+          <span id="zip-status-text">Detecting location automatically...</span>
         </div>
       </div>
 
