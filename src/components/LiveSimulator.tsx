@@ -278,6 +278,7 @@ export const LiveSimulator: React.FC = () => {
 
   // Draggable state for Clock & Weather applets inside Simulator
   const [draggingApplet, setDraggingApplet] = useState<'clock' | 'weather' | null>(null);
+  const [gridSnap, setGridSnap] = useState<boolean>(true);
   const appletDragStart = useRef<{ startX: number; startY: number; initX: number; initY: number }>({
     startX: 0, startY: 0, initX: 0, initY: 0
   });
@@ -300,12 +301,32 @@ export const LiveSimulator: React.FC = () => {
       if (!draggingApplet) return;
       const dx = e.clientX - appletDragStart.current.startX;
       const dy = e.clientY - appletDragStart.current.startY;
-      const newX = Math.max(8, Math.min(420, appletDragStart.current.initX + dx));
-      const newY = Math.max(8, Math.min(380, appletDragStart.current.initY + dy));
+      const rawX = appletDragStart.current.initX + dx;
+      const rawY = appletDragStart.current.initY + dy;
+
+      let targetX = rawX;
+      let targetY = rawY;
+
+      if (viewportRef.current) {
+        const vpRect = viewportRef.current.getBoundingClientRect();
+        const centerX = vpRect.width / 2;
+        const centerY = vpRect.height / 2;
+
+        if (gridSnap) {
+          targetX = centerX + Math.round((rawX - centerX) / 20) * 20;
+          targetY = centerY + Math.round((rawY - centerY) / 20) * 20;
+        }
+
+        const maxX = Math.max(12, vpRect.width - 250);
+        const maxY = Math.max(12, vpRect.height - 180);
+        targetX = Math.max(12, Math.min(maxX, targetX));
+        targetY = Math.max(12, Math.min(maxY, targetY));
+      }
+
       if (draggingApplet === 'clock') {
-        setClockPos({ x: newX, y: newY });
+        setClockPos({ x: Math.round(targetX), y: Math.round(targetY) });
       } else {
-        setWeatherPos({ x: newX, y: newY });
+        setWeatherPos({ x: Math.round(targetX), y: Math.round(targetY) });
       }
     };
 
@@ -321,7 +342,7 @@ export const LiveSimulator: React.FC = () => {
         window.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [draggingApplet]);
+  }, [draggingApplet, gridSnap]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -1366,6 +1387,22 @@ export const LiveSimulator: React.FC = () => {
                 {/* Backdrop tint filter when wallpaper is active (crisp by default, optional blur) */}
                 {bgType !== 'gradient' && (
                   <div className={`absolute inset-0 z-0 pointer-events-none transition-all ${blurBg ? 'bg-slate-950/45 backdrop-blur-md' : 'bg-slate-950/20'}`} />
+                )}
+
+                {/* Centered Snap-To-Grid Overlay (Visible during widget dragging) */}
+                {draggingApplet && gridSnap && (
+                  <div 
+                    className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-200"
+                    style={{
+                      backgroundImage: 'radial-gradient(circle, rgba(96, 165, 250, 0.4) 1.25px, transparent 1.25px)',
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: 'center center'
+                    }}
+                  >
+                    {/* Center Crosshair Guidelines */}
+                    <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-blue-400/40 to-transparent pointer-events-none" />
+                    <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-blue-400/40 to-transparent pointer-events-none" />
+                  </div>
                 )}
 
                 {/* Top Controls Bar */}
@@ -2470,6 +2507,26 @@ export const LiveSimulator: React.FC = () => {
                     onClick={() => setShowWeatherApplet(!showWeatherApplet)}
                     className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
                       showWeatherApplet ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>
+                  </button>
+                </div>
+
+                {/* 5. Snap to Centered Grid Setting */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div>
+                    <span className="font-semibold text-slate-200 text-xs block">Snap to Centered Grid</span>
+                    <span className="text-[10.5px] text-slate-400">Snaps widgets to a 20px grid centered on the page</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !gridSnap;
+                      setGridSnap(next);
+                      showNotification(next ? 'Grid snap enabled (20px centered)' : 'Freeform dragging enabled');
+                    }}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                      gridSnap ? 'bg-blue-600 justify-end' : 'bg-slate-700 justify-start'
                     }`}
                   >
                     <span className="w-4 h-4 rounded-full bg-white shadow-md"></span>

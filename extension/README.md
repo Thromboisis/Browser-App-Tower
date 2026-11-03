@@ -62,6 +62,11 @@ A Chrome extension replicating the Microsoft Edge "App Tower" docked sidebar wit
    - Exact `(x, y)` coordinates are immediately saved and remembered across page reloads, browser restarts, and new tabs without flickering or snapping back to defaults.
    - Includes a one-click "Reset Positions" option in the New Tab Settings modal to instantly restore default layout.
 
+13. **Centered Grid Snapping (Resolution & Aspect Ratio Independent)**:
+   - Widgets snap cleanly to a 20px grid centered on the page, with a subtle tactile grid overlay and center crosshair that activates during dragging.
+   - Coordinates are anchored relative to the center of the viewport `(centerX, centerY)`, ensuring widgets remain perfectly positioned and balanced regardless of window size, aspect ratio, or monitor resolution (ultra-wide, standard, laptop, or split-screen).
+   - Can be toggled on/off in the New Tab Settings modal with one click.
+
 ## Note on Restricted Chrome Pages
 
 Google Chrome has a built-in security policy that **strictly prevents all extensions from injecting content scripts into certain internal and Google pages**:

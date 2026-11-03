@@ -11,6 +11,9 @@
   <!-- Dynamic Background Overlay -->
   <div id="bg-overlay" class="bg-overlay"></div>
 
+  <!-- Centered Snap-To-Grid Overlay (Visible when dragging widgets) -->
+  <div id="grid-overlay" class="grid-overlay" aria-hidden="true"></div>
+
   <!-- Top Controls Bar -->
   <header class="top-nav">
     <div class="top-nav-left"></div>
@@ -264,6 +267,20 @@
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="toggle-weather-applet" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 5. Snap to Centered Grid Setting -->
+      <div class="setting-section">
+        <div class="setting-header-row">
+          <div>
+            <span class="setting-title">Snap to Centered Grid</span>
+            <p class="setting-desc">Snaps widgets to a 20px grid centered on the page so layouts stay balanced across any window size or monitor resolution.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-grid-snap" checked>
             <span class="slider"></span>
           </label>
         </div>

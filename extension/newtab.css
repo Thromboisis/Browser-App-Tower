@@ -133,6 +133,45 @@ html, body {
   height: 19px;
 }
 
+/* Centered Snap-To-Grid Overlay (Anchored to middle of viewport) */
+.grid-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  background-size: 20px 20px;
+  background-position: center center;
+  background-image: radial-gradient(circle, rgba(96, 165, 250, 0.35) 1.25px, transparent 1.25px);
+}
+
+.grid-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(96, 165, 250, 0.35) 15%, rgba(96, 165, 250, 0.35) 85%, transparent);
+  pointer-events: none;
+}
+
+.grid-overlay::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.35) 15%, rgba(96, 165, 250, 0.35) 85%, transparent);
+  pointer-events: none;
+}
+
+.grid-overlay.is-active {
+  opacity: 1;
+}
+
 /* Draggable Applet Modals */
 .draggable-applet {
   position: fixed;
@@ -150,9 +189,10 @@ html, body {
 }
 
 .draggable-applet.is-dragging {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(59, 130, 246, 0.6);
-  border-color: rgba(96, 165, 250, 0.6);
-  opacity: 0.95;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(59, 130, 246, 0.75);
+  border-color: rgba(96, 165, 250, 0.8);
+  opacity: 0.98;
+  cursor: grabbing !important;
 }
 
 .applet-drag-header {
@@ -221,7 +261,7 @@ html, body {
 
 /* Clock Applet specifics */
 .clock-applet {
-  width: 270px;
+  width: 280px;
 }
 
 .clock-body {
@@ -261,7 +301,7 @@ html, body {
 
 /* Weather Applet specifics */
 .weather-applet {
-  width: 270px;
+  width: 280px;
 }
 
 .weather-body {

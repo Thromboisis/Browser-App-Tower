@@ -45,6 +45,8 @@
   const toggleBlurWallpaper = document.getElementById('toggle-blur-wallpaper');
   const toggleClock = document.getElementById('toggle-clock-applet');
   const toggleWeather = document.getElementById('toggle-weather-applet');
+  const toggleGridSnap = document.getElementById('toggle-grid-snap');
+  const gridOverlay = document.getElementById('grid-overlay');
   const inputCustomZip = document.getElementById('input-custom-zip');
   const btnSaveZip = document.getElementById('btn-save-zip');
   const btnResetZip = document.getElementById('btn-reset-zip');
@@ -60,6 +62,25 @@
   const inputSidebarWidth = document.getElementById('input-sidebar-width');
   const labelSidebarWidth = document.getElementById('label-sidebar-width');
   const colorSwatches = document.querySelectorAll('.color-swatch');
+
+  // Centered Grid System Constants & Helpers
+  const GRID_SIZE = 20;
+
+  function getViewportCenter() {
+    return {
+      x: Math.round(window.innerWidth / 2),
+      y: Math.round(window.innerHeight / 2)
+    };
+  }
+
+  function snapToCenteredGrid(pixelVal, centerVal, step = GRID_SIZE) {
+    return centerVal + Math.round((pixelVal - centerVal) / step) * step;
+  }
+
+  // Default balanced positions anchored to the center of the screen
+  const DEFAULT_CLOCK_OFFSET = { offsetX: -620, offsetY: -160 };
+  const DEFAULT_WEATHER_OFFSET = { offsetX: -620, offsetY: 20 };
+
   // Helper to read cached ZIP synchronously on page boot
   function getCachedZip() {
     try {
@@ -70,31 +91,66 @@
   }
 
   // Helper to read cached widget position synchronously on page boot
-  function getCachedPos(key, defaultPos) {
+  function getCachedPos(key, defaultOffset) {
     try {
       const raw = localStorage.getItem('app_tower_' + key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-          return parsed;
+        if (parsed) {
+          if (typeof parsed.offsetX === 'number' && typeof parsed.offsetY === 'number') {
+            return {
+              offsetX: parsed.offsetX,
+              offsetY: parsed.offsetY
+            };
+          }
+          if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+            const center = getViewportCenter();
+            return {
+              offsetX: Math.round((parsed.x - center.x) / GRID_SIZE) * GRID_SIZE,
+              offsetY: Math.round((parsed.y - center.y) / GRID_SIZE) * GRID_SIZE
+            };
+          }
         }
       }
     } catch (e) {}
-    return defaultPos;
+    return defaultOffset;
+  }
+
+  function calculateAppletPixelPos(offset, appletEl) {
+    const center = getViewportCenter();
+    const w = appletEl ? (appletEl.offsetWidth || 280) : 280;
+    const h = appletEl ? (appletEl.offsetHeight || 140) : 140;
+    const pad = 16;
+
+    const offX = (offset && typeof offset.offsetX === 'number') ? offset.offsetX : (offset && typeof offset.x === 'number' ? offset.x - center.x : 0);
+    const offY = (offset && typeof offset.offsetY === 'number') ? offset.offsetY : (offset && typeof offset.y === 'number' ? offset.y - center.y : 0);
+
+    const targetLeft = center.x + offX;
+    const targetTop = center.y + offY;
+
+    const maxLeft = Math.max(pad, window.innerWidth - w - pad);
+    const maxTop = Math.max(pad, window.innerHeight - h - pad);
+
+    return {
+      left: Math.max(pad, Math.min(maxLeft, Math.round(targetLeft))),
+      top: Math.max(pad, Math.min(maxTop, Math.round(targetTop)))
+    };
   }
 
   const initialCachedZip = getCachedZip();
-  const initialClockPos = getCachedPos('clock_pos', { x: 60, y: 90 });
-  const initialWeatherPos = getCachedPos('weather_pos', { x: 60, y: 250 });
+  const initialClockPos = getCachedPos('clock_pos', DEFAULT_CLOCK_OFFSET);
+  const initialWeatherPos = getCachedPos('weather_pos', DEFAULT_WEATHER_OFFSET);
 
-  // Immediately position applets before first paint so they never flicker or jump
+  // Immediately position applets before first paint on the centered grid
   if (clockApplet) {
-    clockApplet.style.left = `${initialClockPos.x}px`;
-    clockApplet.style.top = `${initialClockPos.y}px`;
+    const p = calculateAppletPixelPos(initialClockPos, clockApplet);
+    clockApplet.style.left = `${p.left}px`;
+    clockApplet.style.top = `${p.top}px`;
   }
   if (weatherApplet) {
-    weatherApplet.style.left = `${initialWeatherPos.x}px`;
-    weatherApplet.style.top = `${initialWeatherPos.y}px`;
+    const p = calculateAppletPixelPos(initialWeatherPos, weatherApplet);
+    weatherApplet.style.left = `${p.left}px`;
+    weatherApplet.style.top = `${p.top}px`;
   }
 
   // State
@@ -106,6 +162,7 @@
     blur_bg: false, // Crisp high-definition wallpaper by default!
     show_clock: true,
     show_weather: true,
+    grid_snap: true, // Snap to centered grid enabled by default
     custom_zip: initialCachedZip, // Custom ZIP code for weather & time (empty for Auto IP)
     clock_pos: initialClockPos,
     weather_pos: initialWeatherPos,
@@ -139,6 +196,7 @@
       'blur_bg',
       'show_clock',
       'show_weather',
+      'grid_snap',
       'custom_zip',
       'clock_pos',
       'weather_pos',
@@ -152,6 +210,7 @@
       if (typeof data.blur_bg === 'boolean') settings.blur_bg = data.blur_bg;
       if (typeof data.show_clock === 'boolean') settings.show_clock = data.show_clock;
       if (typeof data.show_weather === 'boolean') settings.show_weather = data.show_weather;
+      if (typeof data.grid_snap === 'boolean') settings.grid_snap = data.grid_snap;
       if (typeof data.custom_zip === 'string') {
         settings.custom_zip = data.custom_zip.trim();
         try {
@@ -162,16 +221,36 @@
           }
         } catch (e) {}
       }
-      if (data.clock_pos && typeof data.clock_pos.x === 'number') {
-        settings.clock_pos = data.clock_pos;
+      if (data.clock_pos) {
+        if (typeof data.clock_pos.offsetX === 'number' && typeof data.clock_pos.offsetY === 'number') {
+          settings.clock_pos = data.clock_pos;
+        } else if (typeof data.clock_pos.x === 'number') {
+          const center = getViewportCenter();
+          settings.clock_pos = {
+            offsetX: Math.round((data.clock_pos.x - center.x) / GRID_SIZE) * GRID_SIZE,
+            offsetY: Math.round((data.clock_pos.y - center.y) / GRID_SIZE) * GRID_SIZE,
+            x: data.clock_pos.x,
+            y: data.clock_pos.y
+          };
+        }
         try {
-          localStorage.setItem('app_tower_clock_pos', JSON.stringify(data.clock_pos));
+          localStorage.setItem('app_tower_clock_pos', JSON.stringify(settings.clock_pos));
         } catch (e) {}
       }
-      if (data.weather_pos && typeof data.weather_pos.x === 'number') {
-        settings.weather_pos = data.weather_pos;
+      if (data.weather_pos) {
+        if (typeof data.weather_pos.offsetX === 'number' && typeof data.weather_pos.offsetY === 'number') {
+          settings.weather_pos = data.weather_pos;
+        } else if (typeof data.weather_pos.x === 'number') {
+          const center = getViewportCenter();
+          settings.weather_pos = {
+            offsetX: Math.round((data.weather_pos.x - center.x) / GRID_SIZE) * GRID_SIZE,
+            offsetY: Math.round((data.weather_pos.y - center.y) / GRID_SIZE) * GRID_SIZE,
+            x: data.weather_pos.x,
+            y: data.weather_pos.y
+          };
+        }
         try {
-          localStorage.setItem('app_tower_weather_pos', JSON.stringify(data.weather_pos));
+          localStorage.setItem('app_tower_weather_pos', JSON.stringify(settings.weather_pos));
         } catch (e) {}
       }
       if (typeof data.dock_width === 'number') settings.dock_width = data.dock_width;
@@ -190,24 +269,27 @@
     if (toggleBlurWallpaper) toggleBlurWallpaper.checked = !!settings.blur_bg;
     if (toggleClock) toggleClock.checked = !!settings.show_clock;
     if (toggleWeather) toggleWeather.checked = !!settings.show_weather;
+    if (toggleGridSnap) toggleGridSnap.checked = settings.grid_snap !== false;
 
     // ZIP Code input
     if (inputCustomZip && document.activeElement !== inputCustomZip) {
       inputCustomZip.value = settings.custom_zip || '';
     }
 
-    // Clock visibility & position
+    // Clock visibility & position (calculated relative to screen center)
     if (clockApplet) {
       clockApplet.style.display = settings.show_clock ? 'block' : 'none';
-      clockApplet.style.left = `${settings.clock_pos.x}px`;
-      clockApplet.style.top = `${settings.clock_pos.y}px`;
+      const pos = calculateAppletPixelPos(settings.clock_pos, clockApplet);
+      clockApplet.style.left = `${pos.left}px`;
+      clockApplet.style.top = `${pos.top}px`;
     }
 
-    // Weather visibility & position
+    // Weather visibility & position (calculated relative to screen center)
     if (weatherApplet) {
       weatherApplet.style.display = settings.show_weather ? 'block' : 'none';
-      weatherApplet.style.left = `${settings.weather_pos.x}px`;
-      weatherApplet.style.top = `${settings.weather_pos.y}px`;
+      const pos = calculateAppletPixelPos(settings.weather_pos, weatherApplet);
+      weatherApplet.style.left = `${pos.left}px`;
+      weatherApplet.style.top = `${pos.top}px`;
     }
 
     // Search provider radio & placeholder
@@ -639,7 +721,7 @@
   // Refresh live weather periodically (initial fetch is safely called inside loadSettings)
   setInterval(fetchLiveWeather, 15 * 60 * 1000);
 
-  // 6. Draggable Applets Behavior
+  // 6. Draggable Applets Behavior with Centered Grid Snapping
   function makeAppletDraggable(appletEl, storageKey) {
     if (!appletEl) return;
 
@@ -657,6 +739,10 @@
 
       isDragging = true;
       appletEl.classList.add('is-dragging');
+      if (gridOverlay && settings.grid_snap !== false) {
+        gridOverlay.classList.add('is-active');
+      }
+
       startX = e.clientX;
       startY = e.clientY;
 
@@ -674,43 +760,85 @@
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
 
-      let newLeft = initialLeft + dx;
-      let newTop = initialTop + dy;
+      let rawLeft = initialLeft + dx;
+      let rawTop = initialTop + dy;
 
-      const maxLeft = Math.max(10, window.innerWidth - appletEl.offsetWidth - 20);
-      const maxTop = Math.max(10, window.innerHeight - appletEl.offsetHeight - 20);
+      const center = getViewportCenter();
+      let targetLeft = rawLeft;
+      let targetTop = rawTop;
 
-      newLeft = Math.max(10, Math.min(maxLeft, newLeft));
-      newTop = Math.max(10, Math.min(maxTop, newTop));
+      if (settings.grid_snap !== false) {
+        targetLeft = snapToCenteredGrid(rawLeft, center.x, GRID_SIZE);
+        targetTop = snapToCenteredGrid(rawTop, center.y, GRID_SIZE);
+      }
 
-      appletEl.style.left = `${newLeft}px`;
-      appletEl.style.top = `${newTop}px`;
+      const pad = 16;
+      const maxLeft = Math.max(pad, window.innerWidth - appletEl.offsetWidth - pad);
+      const maxTop = Math.max(pad, window.innerHeight - appletEl.offsetHeight - pad);
+
+      targetLeft = Math.max(pad, Math.min(maxLeft, targetLeft));
+      targetTop = Math.max(pad, Math.min(maxTop, targetTop));
+
+      appletEl.style.left = `${targetLeft}px`;
+      appletEl.style.top = `${targetTop}px`;
     }
 
     function onMouseUp() {
       if (!isDragging) return;
       isDragging = false;
       appletEl.classList.remove('is-dragging');
+      if (gridOverlay) gridOverlay.classList.remove('is-active');
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
 
       const rect = appletEl.getBoundingClientRect();
-      const pos = { x: Math.round(rect.left), y: Math.round(rect.top) };
-      settings[storageKey] = pos;
+      const center = getViewportCenter();
+
+      // Store as center-relative grid offset
+      let offsetX = Math.round(rect.left - center.x);
+      let offsetY = Math.round(rect.top - center.y);
+
+      if (settings.grid_snap !== false) {
+        offsetX = Math.round((rect.left - center.x) / GRID_SIZE) * GRID_SIZE;
+        offsetY = Math.round((rect.top - center.y) / GRID_SIZE) * GRID_SIZE;
+      }
+
+      const posData = {
+        offsetX,
+        offsetY,
+        x: Math.round(rect.left),
+        y: Math.round(rect.top)
+      };
+
+      settings[storageKey] = posData;
 
       // Persist to both localStorage (instant sync on boot) and chrome.storage.local
       try {
-        localStorage.setItem('app_tower_' + storageKey, JSON.stringify(pos));
+        localStorage.setItem('app_tower_' + storageKey, JSON.stringify(posData));
       } catch (e) {}
 
       const saveObj = {};
-      saveObj[storageKey] = pos;
+      saveObj[storageKey] = posData;
       chrome.storage.local.set(saveObj);
     }
   }
 
   makeAppletDraggable(clockApplet, 'clock_pos');
   makeAppletDraggable(weatherApplet, 'weather_pos');
+
+  // Reposition applets on window resize so they maintain their centered grid placement regardless of window size
+  window.addEventListener('resize', () => {
+    if (clockApplet && settings.show_clock) {
+      const pos = calculateAppletPixelPos(settings.clock_pos, clockApplet);
+      clockApplet.style.left = `${pos.left}px`;
+      clockApplet.style.top = `${pos.top}px`;
+    }
+    if (weatherApplet && settings.show_weather) {
+      const pos = calculateAppletPixelPos(settings.weather_pos, weatherApplet);
+      weatherApplet.style.left = `${pos.left}px`;
+      weatherApplet.style.top = `${pos.top}px`;
+    }
+  });
 
   // 7. Search Form Submission
   if (searchForm && searchInput) {
@@ -898,6 +1026,34 @@
     });
   }
 
+  // Centered Grid Snapping Toggle
+  if (toggleGridSnap) {
+    toggleGridSnap.addEventListener('change', () => {
+      settings.grid_snap = toggleGridSnap.checked;
+      chrome.storage.local.set({ grid_snap: settings.grid_snap });
+      if (settings.grid_snap) {
+        // Snap existing positions to centered grid immediately
+        if (settings.clock_pos) {
+          settings.clock_pos.offsetX = Math.round(settings.clock_pos.offsetX / GRID_SIZE) * GRID_SIZE;
+          settings.clock_pos.offsetY = Math.round(settings.clock_pos.offsetY / GRID_SIZE) * GRID_SIZE;
+          try {
+            localStorage.setItem('app_tower_clock_pos', JSON.stringify(settings.clock_pos));
+          } catch (e) {}
+          chrome.storage.local.set({ clock_pos: settings.clock_pos });
+        }
+        if (settings.weather_pos) {
+          settings.weather_pos.offsetX = Math.round(settings.weather_pos.offsetX / GRID_SIZE) * GRID_SIZE;
+          settings.weather_pos.offsetY = Math.round(settings.weather_pos.offsetY / GRID_SIZE) * GRID_SIZE;
+          try {
+            localStorage.setItem('app_tower_weather_pos', JSON.stringify(settings.weather_pos));
+          } catch (e) {}
+          chrome.storage.local.set({ weather_pos: settings.weather_pos });
+        }
+        applySettingsToUI();
+      }
+    });
+  }
+
   // Location & Weather ZIP Code Controls
   function applyCustomZip() {
     if (!inputCustomZip) return;
@@ -1037,8 +1193,8 @@
   // Reset Positions Button
   if (modalResetPosBtn) {
     modalResetPosBtn.addEventListener('click', () => {
-      settings.clock_pos = { x: 60, y: 90 };
-      settings.weather_pos = { x: 60, y: 250 };
+      settings.clock_pos = { offsetX: DEFAULT_CLOCK_OFFSET.offsetX, offsetY: DEFAULT_CLOCK_OFFSET.offsetY };
+      settings.weather_pos = { offsetX: DEFAULT_WEATHER_OFFSET.offsetX, offsetY: DEFAULT_WEATHER_OFFSET.offsetY };
       try {
         localStorage.setItem('app_tower_clock_pos', JSON.stringify(settings.clock_pos));
         localStorage.setItem('app_tower_weather_pos', JSON.stringify(settings.weather_pos));
