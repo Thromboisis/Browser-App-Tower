@@ -57,6 +57,11 @@ A Chrome extension replicating the Microsoft Edge "App Tower" docked sidebar wit
    - Optional companion new tab page with search engine choices, wallpapers, and draggable Live Clock and Live Weather cards.
    - **Custom ZIP Code Support**: Set a custom US ZIP code or postal code in settings (or by clicking the location badge on either applet) to ensure accurate local weather forecasts and clock timezone, overcoming inaccurate IP geolocation. Easily switch back to Auto IP anytime with one click.
 
+12. **Persistent Clock & Weather Widget Positioning**:
+   - Drag the Live Clock and Live Weather widgets anywhere on the New Tab page.
+   - Exact `(x, y)` coordinates are immediately saved and remembered across page reloads, browser restarts, and new tabs without flickering or snapping back to defaults.
+   - Includes a one-click "Reset Positions" option in the New Tab Settings modal to instantly restore default layout.
+
 ## Note on Restricted Chrome Pages
 
 Google Chrome has a built-in security policy that **strictly prevents all extensions from injecting content scripts into certain internal and Google pages**:

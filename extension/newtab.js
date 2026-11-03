@@ -69,7 +69,33 @@
     }
   }
 
+  // Helper to read cached widget position synchronously on page boot
+  function getCachedPos(key, defaultPos) {
+    try {
+      const raw = localStorage.getItem('app_tower_' + key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return defaultPos;
+  }
+
   const initialCachedZip = getCachedZip();
+  const initialClockPos = getCachedPos('clock_pos', { x: 60, y: 90 });
+  const initialWeatherPos = getCachedPos('weather_pos', { x: 60, y: 250 });
+
+  // Immediately position applets before first paint so they never flicker or jump
+  if (clockApplet) {
+    clockApplet.style.left = `${initialClockPos.x}px`;
+    clockApplet.style.top = `${initialClockPos.y}px`;
+  }
+  if (weatherApplet) {
+    weatherApplet.style.left = `${initialWeatherPos.x}px`;
+    weatherApplet.style.top = `${initialWeatherPos.y}px`;
+  }
 
   // State
   let settings = {
@@ -81,8 +107,8 @@
     show_clock: true,
     show_weather: true,
     custom_zip: initialCachedZip, // Custom ZIP code for weather & time (empty for Auto IP)
-    clock_pos: { x: 60, y: 80 },
-    weather_pos: { x: 60, y: 250 },
+    clock_pos: initialClockPos,
+    weather_pos: initialWeatherPos,
     dock_width: 44,
     dock_color: '#12141a'
   };
@@ -136,8 +162,18 @@
           }
         } catch (e) {}
       }
-      if (data.clock_pos && typeof data.clock_pos.x === 'number') settings.clock_pos = data.clock_pos;
-      if (data.weather_pos && typeof data.weather_pos.x === 'number') settings.weather_pos = data.weather_pos;
+      if (data.clock_pos && typeof data.clock_pos.x === 'number') {
+        settings.clock_pos = data.clock_pos;
+        try {
+          localStorage.setItem('app_tower_clock_pos', JSON.stringify(data.clock_pos));
+        } catch (e) {}
+      }
+      if (data.weather_pos && typeof data.weather_pos.x === 'number') {
+        settings.weather_pos = data.weather_pos;
+        try {
+          localStorage.setItem('app_tower_weather_pos', JSON.stringify(data.weather_pos));
+        } catch (e) {}
+      }
       if (typeof data.dock_width === 'number') settings.dock_width = data.dock_width;
       if (data.dock_color) settings.dock_color = data.dock_color;
 
@@ -606,8 +642,6 @@
   // 6. Draggable Applets Behavior
   function makeAppletDraggable(appletEl, storageKey) {
     if (!appletEl) return;
-    const header = appletEl.querySelector('.applet-drag-header');
-    if (!header) return;
 
     let isDragging = false;
     let startX = 0;
@@ -615,7 +649,12 @@
     let initialLeft = 0;
     let initialTop = 0;
 
-    header.addEventListener('mousedown', (e) => {
+    appletEl.addEventListener('mousedown', (e) => {
+      // Don't drag if clicking buttons, links, inputs, or clickable location badges
+      if (e.target.closest('button, a, input, select, textarea, .clickable, #weather-city-badge, #clock-loc-badge, #weather-loc-badge')) {
+        return;
+      }
+
       isDragging = true;
       appletEl.classList.add('is-dragging');
       startX = e.clientX;
@@ -658,6 +697,11 @@
       const rect = appletEl.getBoundingClientRect();
       const pos = { x: Math.round(rect.left), y: Math.round(rect.top) };
       settings[storageKey] = pos;
+
+      // Persist to both localStorage (instant sync on boot) and chrome.storage.local
+      try {
+        localStorage.setItem('app_tower_' + storageKey, JSON.stringify(pos));
+      } catch (e) {}
 
       const saveObj = {};
       saveObj[storageKey] = pos;
@@ -993,8 +1037,12 @@
   // Reset Positions Button
   if (modalResetPosBtn) {
     modalResetPosBtn.addEventListener('click', () => {
-      settings.clock_pos = { x: 60, y: 80 };
+      settings.clock_pos = { x: 60, y: 90 };
       settings.weather_pos = { x: 60, y: 250 };
+      try {
+        localStorage.setItem('app_tower_clock_pos', JSON.stringify(settings.clock_pos));
+        localStorage.setItem('app_tower_weather_pos', JSON.stringify(settings.weather_pos));
+      } catch (e) {}
       chrome.storage.local.set({
         clock_pos: settings.clock_pos,
         weather_pos: settings.weather_pos
@@ -1012,6 +1060,15 @@
         if (key in settings) {
           settings[key] = change.newValue;
           shouldReapply = true;
+          if (key === 'clock_pos' || key === 'weather_pos') {
+            try {
+              if (change.newValue) {
+                localStorage.setItem('app_tower_' + key, JSON.stringify(change.newValue));
+              } else {
+                localStorage.removeItem('app_tower_' + key);
+              }
+            } catch (e) {}
+          }
           if (key === 'custom_zip') {
             try {
               if (change.newValue) {

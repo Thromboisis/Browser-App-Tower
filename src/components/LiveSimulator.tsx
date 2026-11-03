@@ -206,8 +206,43 @@ export const LiveSimulator: React.FC = () => {
 
   const [showClockApplet, setShowClockApplet] = useState<boolean>(true);
   const [showWeatherApplet, setShowWeatherApplet] = useState<boolean>(true);
-  const [clockPos, setClockPos] = useState<{ x: number; y: number }>({ x: 24, y: 28 });
-  const [weatherPos, setWeatherPos] = useState<{ x: number; y: number }>({ x: 24, y: 175 });
+  const [clockPos, setClockPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('app_tower_sim_clock_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { x: 24, y: 28 };
+  });
+
+  const [weatherPos, setWeatherPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('app_tower_sim_weather_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { x: 24, y: 175 };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_sim_clock_pos', JSON.stringify(clockPos));
+    } catch (e) {}
+  }, [clockPos]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('app_tower_sim_weather_pos', JSON.stringify(weatherPos));
+    } catch (e) {}
+  }, [weatherPos]);
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -1354,7 +1389,11 @@ export const LiveSimulator: React.FC = () => {
                         top: `${clockPos.y}px`,
                         cursor: draggingApplet === 'clock' ? 'grabbing' : 'default'
                       }}
-                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow"
+                      onMouseDown={(e) => {
+                        if ((e.target as HTMLElement).closest('button, a, input, select, textarea, .clickable')) return;
+                        handleStartAppletDrag(e, 'clock');
+                      }}
+                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow select-none"
                     >
                       {/* Header Drag Handle */}
                       <div
@@ -1440,7 +1479,11 @@ export const LiveSimulator: React.FC = () => {
                         top: `${weatherPos.y}px`,
                         cursor: draggingApplet === 'weather' ? 'grabbing' : 'default'
                       }}
-                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow"
+                      onMouseDown={(e) => {
+                        if ((e.target as HTMLElement).closest('button, a, input, select, textarea, .clickable')) return;
+                        handleStartAppletDrag(e, 'weather');
+                      }}
+                      className="absolute z-10 w-[240px] bg-slate-900/85 backdrop-blur-xl border border-slate-700/70 hover:border-slate-600 rounded-2xl shadow-2xl overflow-hidden transition-shadow select-none"
                     >
                       {/* Header Drag Handle */}
                       <div
@@ -2529,6 +2572,10 @@ export const LiveSimulator: React.FC = () => {
                       setClockPos({ x: 24, y: 28 });
                       setWeatherPos({ x: 24, y: 175 });
                       setConfigModalPos({ right: 20, top: 48 });
+                      try {
+                        localStorage.removeItem('app_tower_sim_clock_pos');
+                        localStorage.removeItem('app_tower_sim_weather_pos');
+                      } catch (e) {}
                       showNotification('Applet positions reset');
                     }}
                     className="text-slate-400 hover:text-slate-200 text-xs underline cursor-pointer"
